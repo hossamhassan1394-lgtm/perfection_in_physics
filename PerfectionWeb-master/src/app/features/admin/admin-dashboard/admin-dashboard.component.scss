@@ -1,0 +1,28 @@
+// Table styling
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+// Card hover effects
+.bg-white\/10 {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Lucide icon sizing
+lucide-angular {
+  display: inline-block;
+  
+  &.w-12 {
+    width: 3rem;
+  }
+  
+  &.h-12 {
+    height: 3rem;
+  }
+}
+
+// Smooth transitions
+tr {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}

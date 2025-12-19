@@ -1,0 +1,208 @@
+@echo off
+echo -------------------------------------------------------
+echo Creating Perfection Physics Portal Structure...
+echo -------------------------------------------------------
+
+:: 1. Create Root Directory
+if not exist "perfection-physics-portal" mkdir "perfection-physics-portal"
+cd "perfection-physics-portal"
+
+:: 2. Create Directory Structure (Windows format)
+echo Creating Directories...
+
+mkdir "src\app\core\services"
+mkdir "src\app\core\guards"
+mkdir "src\app\core\interceptors"
+mkdir "src\app\core\models"
+
+mkdir "src\app\shared\components\physics-background"
+mkdir "src\app\shared\components\floating-help"
+mkdir "src\app\shared\components\achievement-badges"
+mkdir "src\app\shared\components\card"
+mkdir "src\app\shared\components\progress-bar"
+mkdir "src\app\shared\components\circular-progress"
+mkdir "src\app\shared\directives"
+mkdir "src\app\shared\pipes"
+mkdir "src\app\shared\utils"
+
+mkdir "src\app\features\auth\login"
+mkdir "src\app\features\dashboard\components\hero-profile"
+mkdir "src\app\features\dashboard\components\attendance-tracker"
+mkdir "src\app\features\dashboard\components\payment-status"
+mkdir "src\app\features\dashboard\components\homework-progress"
+mkdir "src\app\features\dashboard\components\quiz-performance"
+mkdir "src\app\features\dashboard\components\shamel-exam"
+mkdir "src\app\features\dashboard\components\topics-mastery"
+mkdir "src\app\features\admin\student-management"
+mkdir "src\app\features\admin\reports"
+
+mkdir "src\app\layouts\main-layout"
+mkdir "src\app\layouts\auth-layout"
+
+mkdir "src\assets\fonts\space-grotesk"
+mkdir "src\assets\fonts\inter"
+mkdir "src\assets\fonts\jetbrains-mono"
+mkdir "src\assets\fonts\tajawal"
+mkdir "src\assets\images"
+mkdir "src\assets\icons\achievements"
+
+mkdir "src\styles"
+mkdir "src\environments"
+
+:: 3. Create Empty Files
+echo Creating Files...
+
+:: Core Services
+type nul > "src\app\core\services\auth.service.ts"
+type nul > "src\app\core\services\student.service.ts"
+type nul > "src\app\core\services\attendance.service.ts"
+type nul > "src\app\core\services\payment.service.ts"
+type nul > "src\app\core\services\homework.service.ts"
+type nul > "src\app\core\services\quiz.service.ts"
+
+:: Core Guards & Interceptors
+type nul > "src\app\core\guards\auth.guard.ts"
+type nul > "src\app\core\guards\role.guard.ts"
+type nul > "src\app\core\interceptors\auth.interceptor.ts"
+type nul > "src\app\core\interceptors\error.interceptor.ts"
+
+:: Core Models
+type nul > "src\app\core\models\student.model.ts"
+type nul > "src\app\core\models\attendance.model.ts"
+type nul > "src\app\core\models\payment.model.ts"
+type nul > "src\app\core\models\homework.model.ts"
+type nul > "src\app\core\models\quiz.model.ts"
+type nul > "src\app\core\models\achievement.model.ts"
+
+:: Shared Components
+type nul > "src\app\shared\components\physics-background\physics-background.component.ts"
+type nul > "src\app\shared\components\physics-background\physics-background.component.html"
+type nul > "src\app\shared\components\physics-background\physics-background.component.scss"
+type nul > "src\app\shared\components\physics-background\physics-background.component.spec.ts"
+
+type nul > "src\app\shared\components\floating-help\floating-help.component.ts"
+type nul > "src\app\shared\components\floating-help\floating-help.component.html"
+type nul > "src\app\shared\components\floating-help\floating-help.component.scss"
+type nul > "src\app\shared\components\floating-help\floating-help.component.spec.ts"
+
+type nul > "src\app\shared\components\achievement-badges\achievement-badges.component.ts"
+type nul > "src\app\shared\components\achievement-badges\achievement-badges.component.html"
+type nul > "src\app\shared\components\achievement-badges\achievement-badges.component.scss"
+type nul > "src\app\shared\components\achievement-badges\achievement-badges.component.spec.ts"
+
+type nul > "src\app\shared\components\card\card.component.ts"
+type nul > "src\app\shared\components\card\card.component.html"
+type nul > "src\app\shared\components\card\card.component.scss"
+
+type nul > "src\app\shared\components\progress-bar\progress-bar.component.ts"
+type nul > "src\app\shared\components\progress-bar\progress-bar.component.html"
+type nul > "src\app\shared\components\progress-bar\progress-bar.component.scss"
+
+type nul > "src\app\shared\components\circular-progress\circular-progress.component.ts"
+type nul > "src\app\shared\components\circular-progress\circular-progress.component.html"
+type nul > "src\app\shared\components\circular-progress\circular-progress.component.scss"
+
+:: Shared Directives & Pipes
+type nul > "src\app\shared\directives\animate-on-scroll.directive.ts"
+type nul > "src\app\shared\directives\gradient-border.directive.ts"
+type nul > "src\app\shared\directives\hover-glow.directive.ts"
+type nul > "src\app\shared\pipes\arabic-date.pipe.ts"
+type nul > "src\app\shared\pipes\grade-color.pipe.ts"
+type nul > "src\app\shared\pipes\percentage.pipe.ts"
+type nul > "src\app\shared\utils\animations.ts"
+type nul > "src\app\shared\utils\color-utils.ts"
+type nul > "src\app\shared\utils\date-utils.ts"
+
+:: Feature - Auth
+type nul > "src\app\features\auth\login\login.component.ts"
+type nul > "src\app\features\auth\login\login.component.html"
+type nul > "src\app\features\auth\login\login.component.scss"
+type nul > "src\app\features\auth\login\login.component.spec.ts"
+type nul > "src\app\features\auth\auth-routing.module.ts"
+
+:: Feature - Dashboard Components
+type nul > "src\app\features\dashboard\components\hero-profile\hero-profile.component.ts"
+type nul > "src\app\features\dashboard\components\hero-profile\hero-profile.component.html"
+type nul > "src\app\features\dashboard\components\hero-profile\hero-profile.component.scss"
+
+type nul > "src\app\features\dashboard\components\attendance-tracker\attendance-tracker.component.ts"
+type nul > "src\app\features\dashboard\components\attendance-tracker\attendance-tracker.component.html"
+type nul > "src\app\features\dashboard\components\attendance-tracker\attendance-tracker.component.scss"
+
+type nul > "src\app\features\dashboard\components\payment-status\payment-status.component.ts"
+type nul > "src\app\features\dashboard\components\payment-status\payment-status.component.html"
+type nul > "src\app\features\dashboard\components\payment-status\payment-status.component.scss"
+
+type nul > "src\app\features\dashboard\components\homework-progress\homework-progress.component.ts"
+type nul > "src\app\features\dashboard\components\homework-progress\homework-progress.component.html"
+type nul > "src\app\features\dashboard\components\homework-progress\homework-progress.component.scss"
+
+type nul > "src\app\features\dashboard\components\quiz-performance\quiz-performance.component.ts"
+type nul > "src\app\features\dashboard\components\quiz-performance\quiz-performance.component.html"
+type nul > "src\app\features\dashboard\components\quiz-performance\quiz-performance.component.scss"
+
+type nul > "src\app\features\dashboard\components\shamel-exam\shamel-exam.component.ts"
+type nul > "src\app\features\dashboard\components\shamel-exam\shamel-exam.component.html"
+type nul > "src\app\features\dashboard\components\shamel-exam\shamel-exam.component.scss"
+
+type nul > "src\app\features\dashboard\components\topics-mastery\topics-mastery.component.ts"
+type nul > "src\app\features\dashboard\components\topics-mastery\topics-mastery.component.html"
+type nul > "src\app\features\dashboard\components\topics-mastery\topics-mastery.component.scss"
+
+type nul > "src\app\features\dashboard\dashboard.component.ts"
+type nul > "src\app\features\dashboard\dashboard.component.html"
+type nul > "src\app\features\dashboard\dashboard.component.scss"
+type nul > "src\app\features\dashboard\dashboard.component.spec.ts"
+type nul > "src\app\features\dashboard\dashboard-routing.module.ts"
+
+:: Feature - Admin
+type nul > "src\app\features\admin\admin-routing.module.ts"
+
+:: Layouts
+type nul > "src\app\layouts\main-layout\main-layout.component.ts"
+type nul > "src\app\layouts\main-layout\main-layout.component.html"
+type nul > "src\app\layouts\main-layout\main-layout.component.scss"
+type nul > "src\app\layouts\auth-layout\auth-layout.component.ts"
+type nul > "src\app\layouts\auth-layout\auth-layout.component.html"
+type nul > "src\app\layouts\auth-layout\auth-layout.component.scss"
+
+:: Root App Files
+type nul > "src\app\app.component.ts"
+type nul > "src\app\app.component.html"
+type nul > "src\app\app.component.scss"
+type nul > "src\app\app.config.ts"
+type nul > "src\app\app.routes.ts"
+
+:: Assets
+type nul > "src\assets\images\logo.svg"
+type nul > "src\assets\images\atom-icon.svg"
+type nul > "src\assets\images\physics-bg.svg"
+
+:: Styles
+type nul > "src\styles\_variables.scss"
+type nul > "src\styles\_mixins.scss"
+type nul > "src\styles\_animations.scss"
+type nul > "src\styles\_typography.scss"
+type nul > "src\styles\_utilities.scss"
+type nul > "src\styles\_physics-effects.scss"
+type nul > "src\styles\styles.scss"
+
+:: Environments
+type nul > "src\environments\environment.ts"
+type nul > "src\environments\environment.prod.ts"
+
+:: Root Config Files
+type nul > "src\index.html"
+type nul > "src\main.ts"
+type nul > "angular.json"
+type nul > "package.json"
+type nul > "tsconfig.json"
+type nul > "tsconfig.app.json"
+type nul > "tsconfig.spec.json"
+type nul > "README.md"
+
+echo -------------------------------------------------------
+echo SUCCESS: Project structure created!
+echo Location: %CD%
+echo -------------------------------------------------------
+pause
