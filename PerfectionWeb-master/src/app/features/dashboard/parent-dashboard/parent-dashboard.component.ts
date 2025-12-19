@@ -170,7 +170,7 @@ export class ParentDashboardComponent implements OnInit {
     const student = this.selectedStudent();
     if (!student) return 0;
     const { paid, total } = student.payments;
-    return Math.round((paid / total) * 100);
+    return paid;
   }
 
   scrollSessions(direction: 'left' | 'right'): void {
