@@ -32,12 +32,16 @@ export interface Session {
   id: number;
   chapter: number;
   name: string;
+  lectureName?: string;
   date: string;
   startTime: string;
   endTime: string;
+  start_time?: string;
+  mark?: number;
   attendance: 'attended' | 'upcoming' | 'missed';
   quizCorrect: number;
   quizTotal: number;
+  adminQuizMark?: number;
   payment: number;
   homeworkStatus: 'completed' | 'pending';
 }

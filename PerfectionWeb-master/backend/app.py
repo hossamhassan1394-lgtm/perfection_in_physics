@@ -248,62 +248,86 @@ def parse_normal_lecture_sheet(file_path):
             
             try:
                 # Parse time if available
-                finish_time = None
+                start_time = None
                 if time_col and not pd.isna(row[time_col]):
                     try:
-                        if isinstance(row[time_col], datetime):
-                            finish_time = row[time_col].strftime('%Y-%m-%d %H:%M:%S')
-                        elif isinstance(row[time_col], pd.Timestamp):
-                            finish_time = row[time_col].strftime('%Y-%m-%d %H:%M:%S')
+                        time_val = row[time_col]
+                        if isinstance(time_val, datetime):
+                            start_time = time_val.strftime('%Y-%m-%d %H:%M:%S')
+                        elif isinstance(time_val, pd.Timestamp):
+                            start_time = time_val.strftime('%Y-%m-%d %H:%M:%S')
                         else:
-                            finish_time = str(row[time_col]).strip()
-                    except:
-                        finish_time = str(row[time_col]).strip()
+                            start_time = str(time_val).strip()
+                            # Only set if not empty
+                            if not start_time:
+                                start_time = None
+                    except Exception as time_error:
+                        print(f"Warning parsing time for {row[id_col]}: {str(time_error)}")
+                        start_time = None
                 
-                # Handle parent_no conversion
+                # Handle parent_no conversion (CRITICAL - must not be empty if provided)
                 parent_no_val = row[parent_col]
-                if pd.isna(parent_no_val):
-                    parent_no_str = ''
-                else:
+                parent_no_str = ''
+                if not pd.isna(parent_no_val) and str(parent_no_val).strip():
                     try:
+                        # Try to parse as number first
                         parent_no_str = str(int(float(parent_no_val)))
                     except:
                         parent_no_str = str(parent_no_val).strip()
                 
                 # Handle student_no conversion
                 student_no_str = None
-                if student_no_col and not pd.isna(row[student_no_col]):
+                if student_no_col and not pd.isna(row[student_no_col]) and str(row[student_no_col]).strip():
                     try:
                         student_no_str = str(int(float(row[student_no_col])))
                     except:
                         student_no_str = str(row[student_no_col]).strip()
                 
+                # Parse pokin
+                pokin_val = None
+                if pokin_col and not pd.isna(row[pokin_col]):
+                    try:
+                        pokin_val = float(row[pokin_col])
+                    except:
+                        pass
+                
+                # Parse payment
+                payment_val = None
+                if p_col and not pd.isna(row[p_col]):
+                    try:
+                        payment_val = float(row[p_col])
+                    except:
+                        pass
+                
+                # Parse quiz mark
+                quiz_val = None
+                if q_col and not pd.isna(row[q_col]):
+                    try:
+                        quiz_val = float(row[q_col])
+                    except:
+                        pass
+                
                 record = {
                     'id': str(row[id_col]).strip(),
                     'name': str(row[name_col]).strip() if not pd.isna(row[name_col]) else '',
-                    'pokin': float(row[pokin_col]) if pokin_col and not pd.isna(row[pokin_col]) else None,
+                    'pokin': pokin_val,
                     'student_no': student_no_str,
                     'parent_no': parent_no_str,
                     'attendance': 1 if a_col and not pd.isna(row[a_col]) and (row[a_col] == 1 or str(row[a_col]).strip() == '1') else 0,
-                    'payment': float(row[p_col]) if p_col and not pd.isna(row[p_col]) else None,
-                    'quiz_mark': float(row[q_col]) if q_col and not pd.isna(row[q_col]) else None,
-                    'finish_time': finish_time,
-                    'homework_status': None
+                    'payment': payment_val,
+                    'quiz_mark': quiz_val,
+                    'start_time': start_time,
+                    'homework_status': 0  # Default to completed
                 }
                 
                 # Parse s1 (homework status)
                 # null/empty = completed (0), 1 = no hw, 2 = not completed, 3 = cheated
-                if s1_col and not pd.isna(row[s1_col]):
-                    s1_value = row[s1_col]
-                    if pd.isna(s1_value) or str(s1_value).strip() == '':
-                        record['homework_status'] = 0  # completed
-                    else:
-                        try:
-                            record['homework_status'] = int(float(s1_value))
-                        except:
-                            record['homework_status'] = None
-                else:
-                    record['homework_status'] = 0  # completed (null means completed)
+                if s1_col and not pd.isna(row[s1_col]) and str(row[s1_col]).strip():
+                    try:
+                        s1_value = int(float(row[s1_col]))
+                        record['homework_status'] = s1_value
+                    except:
+                        record['homework_status'] = 0
                 
                 records.append(record)
             except Exception as e:
@@ -347,103 +371,68 @@ def create_or_update_parent(parent_no, student_name=None):
 
 def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam, lecture_name='', exam_name='', has_exam_grade=True, has_payment=True, has_time=True):
     """
-    Update database with parsed records
-    Also stores lecture metadata and feature flags for parent dashboard filtering
+    Update database with parsed records - Insert ALL records without validation
     """
     try:
         updated_count = 0
         errors = []
-        parents_created = set()  # Track parents we've already created
         
         for record in records:
             try:
-                # Create parent account if parent_no exists
+                student_id = record.get('id', '').strip()
+                student_name = record.get('name', '').strip() or 'Unknown'
                 parent_no_raw = record.get('parent_no', '') or ''
-                parent_no = normalize_phone(parent_no_raw)
-                if parent_no and parent_no not in parents_created:
-                    create_or_update_parent(parent_no, record.get('name'))
-                    parents_created.add(parent_no)
+                parent_no = normalize_phone(parent_no_raw) or ''
                 
-                # Determine quiz_mark: for general exam use provided value, for normal lecture use Excel value or provided value
-                final_quiz_mark = None
-                if is_general_exam:
-                    final_quiz_mark = quiz_mark
-                else:
-                    # For normal lecture, prefer Excel value, fallback to provided value
-                    final_quiz_mark = record.get('quiz_mark')
-                    if final_quiz_mark is None:
-                        final_quiz_mark = quiz_mark
-                
-                # Determine finish_time: use provided value or Excel value
-                final_finish_time = finish_time if finish_time else record.get('finish_time')
-                
-                # Prepare data for database (only include non-None values)
+                # Prepare data for database
                 db_data = {
-                    'student_id': record['id'],
-                    'student_name': record.get('name', ''),
+                    'student_id': student_id or f'student_{updated_count}',
+                    'student_name': student_name,
                     'parent_no': parent_no,
                     'session_number': session_number,
                     'group_name': group,
                     'is_general_exam': is_general_exam,
-                    'attendance': record.get('attendance', 0),
-                    'payment': record.get('payment', 0) or 0,
-                    'has_exam_grade': has_exam_grade,
-                    'has_payment': has_payment,
-                    'has_time': has_time,
+                    'attendance': int(record.get('attendance', 0)) if record.get('attendance') else 0,
+                    'payment': float(record.get('payment', 0)) if record.get('payment') else 0,
                 }
                 
-                # Add lecture/exam metadata
+                # Add lecture/exam name
                 if is_general_exam and exam_name:
                     db_data['exam_name'] = exam_name
                 elif not is_general_exam and lecture_name:
                     db_data['lecture_name'] = lecture_name
                 
-                # Add optional fields only if they have values
-                if final_quiz_mark is not None:
-                    db_data['quiz_mark'] = float(final_quiz_mark)
+                # Add admin quiz mark
+                if quiz_mark is not None:
+                    db_data['admin_quiz_mark'] = float(quiz_mark)
                 
-                if final_finish_time:
-                    db_data['finish_time'] = final_finish_time
+                # Add optional fields
+                if record.get('quiz_mark'):
+                    db_data['quiz_mark'] = float(record.get('quiz_mark'))
+                
+                if finish_time:
+                    db_data['finish_time'] = finish_time
+                
+                if record.get('start_time'):
+                    db_data['start_time'] = record.get('start_time')
                 
                 if record.get('homework_status') is not None:
-                    db_data['homework_status'] = record.get('homework_status')
+                    db_data['homework_status'] = int(record.get('homework_status'))
                 
-                if record.get('pokin') is not None:
+                if record.get('pokin'):
                     db_data['pokin'] = float(record.get('pokin'))
                 
                 if record.get('student_no'):
-                    db_data['student_no'] = record.get('student_no')
+                    db_data['student_no'] = str(record.get('student_no')).strip()
                 
-                # Check if record exists (by student_id, session_number, group, is_general_exam)
-                try:
-                    existing = supabase.table('session_records').select('*').eq('student_id', record['id']).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
-                    
-                    if existing.data and len(existing.data) > 0:
-                        # Update existing record
-                        result = supabase.table('session_records').update(db_data).eq('student_id', record['id']).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
-                    else:
-                        # Insert new record
-                        result = supabase.table('session_records').insert(db_data).execute()
-                    
-                    updated_count += 1
-                except Exception as db_error:
-                    error_msg = str(db_error)
-                    # Check if it's a unique constraint violation (record already exists)
-                    if 'duplicate' in error_msg.lower() or 'unique' in error_msg.lower():
-                        # Try update instead
-                        try:
-                            result = supabase.table('session_records').update(db_data).eq('student_id', record['id']).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
-                            updated_count += 1
-                        except Exception as update_error:
-                            errors.append(f"Error updating record for {record.get('id', 'unknown')}: {str(update_error)}")
-                    else:
-                        errors.append(f"Error updating record for {record.get('id', 'unknown')}: {error_msg}")
-                    continue
+                # Insert record - no validation, just insert everything
+                supabase.table('session_records').insert(db_data).execute()
+                updated_count += 1
                     
             except Exception as e:
-                errors.append(f"Error processing record for {record.get('id', 'unknown')}: {str(e)}")
-                continue
+                errors.append(str(e))
         
+        print(f"✅ Uploaded {updated_count}/{len(records)} records")
         return updated_count, errors
     except Exception as e:
         raise Exception(f"Error updating database: {str(e)}")
@@ -681,8 +670,10 @@ def get_parent_sessions():
                 'id': r.get('id') or r.get('student_no') or r.get('student_id'),
                 'chapter': r.get('session_number'),
                 'name': r.get('lecture_name') or r.get('exam_name') or r.get('student_name') or f"Session {r.get('session_number')}",
+                'lectureName': r.get('lecture_name') or r.get('exam_name'),
                 'date': r.get('finish_time') or '',
                 'startTime': r.get('start_time') or '',
+                'start_time': r.get('start_time') or '',
                 'attendance': 'attended' if int(r.get('attendance') or 0) == 1 else 'missed',
                 'homeworkStatus': 'completed' if (r.get('homework_status') in (0, None)) else 'pending'
             }
@@ -691,6 +682,9 @@ def get_parent_sessions():
             if has_exam_grade:
                 session['quizCorrect'] = int(r.get('quiz_mark') or 0)
                 session['quizTotal'] = 15
+                # Add admin quiz mark if available
+                if r.get('admin_quiz_mark'):
+                    session['adminQuizMark'] = int(r.get('admin_quiz_mark') or 15)
             
             # Conditionally add payment only if has_payment is true
             if has_payment:
@@ -794,13 +788,30 @@ def login():
         result = supabase.table('parents').select('*').eq('phone_number', phone_number).execute()
         
         if not result.data or len(result.data) == 0:
-            return jsonify({'success': False, 'message': 'Invalid phone number or password'}), 401
-        
-        parent = result.data[0]
-        
-        # Check password (in production, use proper password hashing)
-        if parent['password_hash'] != password:
-            return jsonify({'success': False, 'message': 'Invalid phone number or password'}), 401
+            # Parent doesn't exist, create a new one with default password
+            print(f"📝 Creating new parent account for {phone_number}")
+            try:
+                parent_data = {
+                    'phone_number': phone_number,
+                    'password_hash': password,
+                    'needs_password_reset': True,
+                    'name': f'Parent {phone_number}'
+                }
+                create_result = supabase.table('parents').insert(parent_data).execute()
+                if create_result and create_result.data:
+                    parent = create_result.data[0]
+                    print(f"✓ Parent account created for {phone_number}")
+                else:
+                    return jsonify({'success': False, 'message': 'Failed to create parent account'}), 500
+            except Exception as create_error:
+                print(f"❌ Error creating parent: {str(create_error)}")
+                return jsonify({'success': False, 'message': f'Error creating account: {str(create_error)}'}), 500
+        else:
+            parent = result.data[0]
+            
+            # Check password (in production, use proper password hashing)
+            if parent['password_hash'] != password:
+                return jsonify({'success': False, 'message': 'Invalid phone number or password'}), 401
         
         # Update last login
         try:
@@ -820,6 +831,7 @@ def login():
         }), 200
         
     except Exception as e:
+        print(f"❌ Login error: {str(e)}")
         return jsonify({'success': False, 'message': f'Login error: {str(e)}'}), 500
 
 

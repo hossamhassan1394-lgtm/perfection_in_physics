@@ -271,7 +271,8 @@
                   <lucide-angular [img]="Zap" class="session-icon"></lucide-angular>
                 </div>
                 <div class="session-title-group">
-                  <h4 class="session-title">Session #{{ session.id }} • Chapter {{ session.chapter }}</h4>
+                  <h4 class="session-title">{{ session.lectureName || ('Session #' + session.id + ' • Chapter ' +
+                    session.chapter) }}</h4>
                   <p class="session-topic">{{ session.name }}</p>
                 </div>
                 <span class="status-badge" [ngClass]="session.attendance">
@@ -288,7 +289,7 @@
                     <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
                   </div>
                   <p class="info-label">{{ lang() === 'en' ? 'START TIME' : 'وقت البداية' }}</p>
-                  <p class="info-value">{{ session.startTime }}</p>
+                  <p class="info-value">{{ session.start_time || session.startTime }}</p>
                 </div>
 
                 <div class="info-item">
@@ -304,7 +305,7 @@
                     <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
                   </div>
                   <p class="info-label">{{ lang() === 'en' ? 'QUIZ SCORE' : 'درجة الاختبار' }}</p>
-                  <p class="info-value">{{ session.quizCorrect }}/{{ session.quizTotal }}</p>
+                  <p class="info-value">{{ session.quizCorrect }}/{{ session.adminQuizMark || session.quizTotal }}</p>
                   <p class="info-sub">{{ lang() === 'en' ? 'questions' : 'أسئلة' }}</p>
                 </div>
 
@@ -314,6 +315,14 @@
                   </div>
                   <p class="info-label">{{ lang() === 'en' ? 'PAYMENT' : 'الدفع' }}</p>
                   <p class="info-value">{{ session.payment }} EGP</p>
+                </div>
+
+                <div class="info-item" *ngIf="session.mark !== undefined">
+                  <div class="info-icon-wrapper">
+                    <lucide-angular [img]="Trophy" class="info-icon"></lucide-angular>
+                  </div>
+                  <p class="info-label">{{ lang() === 'en' ? 'MARK' : 'العلامة' }}</p>
+                  <p class="info-value">{{ session.mark }}</p>
                 </div>
               </div>
 

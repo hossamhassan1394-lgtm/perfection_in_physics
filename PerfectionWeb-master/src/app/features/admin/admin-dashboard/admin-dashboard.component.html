@@ -1,13 +1,22 @@
 <div class="min-h-screen bg-gradient-to-br from-[#1a1f3a] to-[#2d1b4e]">
   <!-- Navigation Buttons -->
-  <div class="fixed top-4 left-4 right-4 flex justify-between items-center z-20">
+  <div class="fixed top-4 left-4 z-20">
     <button (click)="goBack()" class="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg 
-             text-white hover:bg-white/30 transition-all duration-200">
+             text-white hover:bg-white/30 transition-all duration-200 whitespace-nowrap">
       <lucide-angular [img]="ChevronLeft" class="w-5 h-5"></lucide-angular>
       <span class="text-sm font-medium">{{ lang() === 'en' ? 'Back' : 'رجوع' }}</span>
     </button>
+  </div>
 
-    <button (click)="toggleLanguage()" class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg 
+  <!-- Center Top Navigation -->
+  <div class="fixed top-4 left-1/2 transform -translate-x-1/2 flex items-center gap-3 z-20">
+    <button type="button" (click)="handleLogout()" class="flex items-center gap-2 px-4 py-2 bg-red-500/30 backdrop-blur-sm rounded-lg 
+             text-red-300 hover:bg-red-500/50 transition-all duration-200" title="Logout">
+      <lucide-angular [img]="LogOut" class="w-5 h-5"></lucide-angular>
+      <span class="text-sm font-medium">{{ lang() === 'en' ? 'Logout' : 'تسجيل' }}</span>
+    </button>
+
+    <button type="button" (click)="toggleLanguage()" class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg 
              text-white hover:bg-white/30 transition-all duration-200 text-sm font-medium">
       {{ lang() === 'en' ? 'EN' : 'ع/AR' }}
     </button>
@@ -126,7 +135,7 @@
                 <td class="py-4 px-4 text-center">
                   <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
                     [class]="getPaymentColor(student.payments)">
-                    {{ student.payments.paid }}/{{ student.payments.total }}
+                    {{ student.payments.paid }}
                   </span>
                 </td>
               </tr>

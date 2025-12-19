@@ -8,7 +8,8 @@ import {
   TrendingUp,
   DollarSign,
   Award,
-  ChevronLeft
+  ChevronLeft,
+  LogOut
 } from 'lucide-angular';
 // import { TopNavComponent } from '../../../shared/components/top-nav/top-nav.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -34,6 +35,7 @@ export class AdminDashboardComponent implements OnInit {
   readonly DollarSign = DollarSign;
   readonly Award = Award;
   readonly ChevronLeft = ChevronLeft;
+  readonly LogOut = LogOut;
 
   // Language signal
   lang = signal<'en' | 'ar'>('en');
@@ -129,5 +131,27 @@ export class AdminDashboardComponent implements OnInit {
     this.lang.set(newLang);
     document.documentElement.lang = newLang;
     document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+  }
+
+  // Logout
+  handleLogout(): void {
+    try {
+      console.log('🔓 Logging out admin user');
+      this.authService.logout();
+      console.log('✓ Auth service logout complete');
+
+      // Navigate to login with replace to prevent back button
+      this.router.navigate(['/login'], { replaceUrl: true }).then(success => {
+        if (success) {
+          console.log('✓ Successfully navigated to login');
+        } else {
+          console.error('✗ Failed to navigate to login');
+        }
+      }).catch(err => {
+        console.error('✗ Navigation error:', err);
+      });
+    } catch (error) {
+      console.error('✗ Logout error:', error);
+    }
   }
 }

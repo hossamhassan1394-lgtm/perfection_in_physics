@@ -48,6 +48,7 @@ export class ExcelUploadComponent {
   uploadProgress = signal<number>(0);
   uploadResult = signal<UploadResponse | null>(null);
   uploadError = signal<string | null>(null);
+  detailedErrors = signal<string[]>([]);
 
   constructor(
     private location: Location,
@@ -138,18 +139,30 @@ export class ExcelUploadComponent {
       )
       .subscribe({
         next: (response) => {
+          console.log('✓ Upload successful:', response);
           this.isUploading.set(false);
           this.uploadProgress.set(100);
           this.uploadResult.set(response);
+          // Show detailed errors if any
+          if (response.errors && response.errors.length > 0) {
+            this.detailedErrors.set(response.errors.slice(0, 10)); // Show first 10 errors
+          }
           if (response.success) {
             // Reset form on success
             this.resetForm();
           }
         },
         error: (error) => {
+          console.error('✗ Upload error:', error);
           this.isUploading.set(false);
-          this.uploadError.set(error.error?.error || error.message || 'Upload failed');
-          console.error('Upload error:', error);
+          const errorMessage = error.error?.error || error.error?.message || error.message || 'Upload failed';
+          this.uploadError.set(errorMessage);
+          console.error('Upload error details:', {
+            status: error.status,
+            statusText: error.statusText,
+            message: error.message,
+            error: error.error
+          });
         }
       });
   }
@@ -163,6 +176,7 @@ export class ExcelUploadComponent {
     this.isGeneralExam = false;
     this.lectureNumber = null;
     this.examName = '';
+    this.detailedErrors.set([]);
     // Reset file input
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
     if (fileInput) {

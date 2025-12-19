@@ -80,7 +80,10 @@ export class ExcelUploadService {
       formData.append('exam_name', examName);
     }
 
-    return this.http.post<UploadResponse>(`${this.apiUrl}/upload-excel`, formData);
+    return this.http.post<UploadResponse>(`${this.apiUrl}/upload-excel`, formData, {
+      reportProgress: true,
+      responseType: 'json'
+    });
   }
 
   /**

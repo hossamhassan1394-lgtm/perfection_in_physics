@@ -150,10 +150,20 @@
         ✅ {{ getSuccessMessage() }}
         @if (uploadResult()?.updated_count !== undefined) {
         <div class="result-details">
-          <p>Updated: {{ uploadResult()?.updated_count }} records</p>
-          <p>Total: {{ uploadResult()?.total_records }} records</p>
-          @if (uploadResult()?.errors && uploadResult()!.errors!.length > 0) {
-          <p class="error-count">Errors: {{ uploadResult()?.error_count }}</p>
+          <p>✅ Updated: {{ uploadResult()?.updated_count }} records</p>
+          <p>📊 Total: {{ uploadResult()?.total_records }} records</p>
+          @if (uploadResult()?.error_count !== undefined && uploadResult()!.error_count! > 0) {
+          <p class="error-count">❌ Errors: {{ uploadResult()?.error_count }}</p>
+          @if (detailedErrors().length > 0) {
+          <div class="error-list">
+            <p class="text-sm font-medium mb-2">First errors encountered:</p>
+            <ul class="text-xs space-y-1">
+              @for (err of detailedErrors(); track $index) {
+              <li>• {{ err }}</li>
+              }
+            </ul>
+          </div>
+          }
           }
         </div>
         }

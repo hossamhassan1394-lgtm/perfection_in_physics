@@ -183,4 +183,4 @@ export class ResetPasswordComponent implements OnInit {
     document.documentElement.lang = newLang;
     document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
   }
-}
+} 
