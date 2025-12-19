@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Upload Test - PerfectionWeb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="file"],
+        input[type="number"],
+        input[type="text"],
+        input[type="datetime-local"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .checkbox-label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result pre {
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Excel Upload Test</h1>
+        <p class="subtitle">Upload Excel files to update student records</p>
+        
+        <div class="info">
+            <strong>Note:</strong> Make sure your Flask backend is running on <code>http://localhost:5000</code>
+        </div>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="file">Excel File (.xlsx or .xls) *</label>
+                <input type="file" id="file" name="file" accept=".xlsx,.xls" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="session_number">Session Number *</label>
+                <input type="number" id="session_number" name="session_number" min="1" max="8" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="quiz_mark">Quiz Mark</label>
+                <input type="number" id="quiz_mark" name="quiz_mark" step="0.01" placeholder="Optional">
+                <small style="color: #666; font-size: 12px;">Required for general exam</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="finish_time">Finish Time</label>
+                <input type="datetime-local" id="finish_time" name="finish_time">
+            </div>
+            
+            <div class="form-group">
+                <label for="group">Group *</label>
+                <select id="group" name="group" required>
+                    <option value="cam1">cam1</option>
+                    <option value="maimi">maimi</option>
+                    <option value="cam2">cam2</option>
+                    <option value="west">west</option>
+                    <option value="station1">station1</option>
+                    <option value="station2">station2</option>
+                    <option value="station3">station3</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="is_general_exam" name="is_general_exam">
+                    <label for="is_general_exam" class="checkbox-label">General Exam (uncheck for Normal Lecture)</label>
+                </div>
+            </div>
+            
+            <button type="submit" id="submitBtn">Upload Excel File</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">Uploading and processing...</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('uploadForm');
+        const resultDiv = document.getElementById('result');
+        const loadingDiv = document.getElementById('loading');
+        const submitBtn = document.getElementById('submitBtn');
+        const apiUrl = 'http://localhost:5000/api/upload-excel';
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Hide previous results
+            resultDiv.style.display = 'none';
+            resultDiv.className = 'result';
+            
+            // Show loading
+            loadingDiv.style.display = 'block';
+            submitBtn.disabled = true;
+            
+            // Get form data
+            const formData = new FormData();
+            const fileInput = document.getElementById('file');
+            const sessionNumber = document.getElementById('session_number').value;
+            const quizMark = document.getElementById('quiz_mark').value;
+            const finishTime = document.getElementById('finish_time').value;
+            const group = document.getElementById('group').value;
+            const isGeneralExam = document.getElementById('is_general_exam').checked;
+            
+            // Validate file
+            if (!fileInput.files[0]) {
+                showResult('error', 'Please select a file');
+                loadingDiv.style.display = 'none';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            // Build form data
+            formData.append('file', fileInput.files[0]);
+            formData.append('session_number', sessionNumber);
+            if (quizMark) formData.append('quiz_mark', quizMark);
+            if (finishTime) {
+                // Convert datetime-local to format expected by backend
+                const date = new Date(finishTime);
+                formData.append('finish_time', date.toISOString().slice(0, 19).replace('T', ' '));
+            }
+            formData.append('group', group);
+            formData.append('is_general_exam', isGeneralExam.toString());
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', `✅ ${data.message}\n\nUpdated: ${data.updated_count} records\nTotal: ${data.total_records} records`, data);
+                } else {
+                    showResult('error', `❌ Error: ${data.error}`, data);
+                }
+            } catch (error) {
+                showResult('error', `❌ Network Error: ${error.message}\n\nMake sure the Flask backend is running on http://localhost:5000`);
+            } finally {
+                loadingDiv.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+        
+        function showResult(type, message, data = null) {
+            resultDiv.className = `result ${type}`;
+            let content = message;
+            
+            if (data && data.errors && data.errors.length > 0) {
+                content += `\n\nErrors (${data.errors.length}):\n${data.errors.slice(0, 5).join('\n')}`;
+                if (data.errors.length > 5) {
+                    content += `\n... and ${data.errors.length - 5} more`;
+                }
+            }
+            
+            if (data) {
+                content += '\n\nFull Response:\n' + JSON.stringify(data, null, 2);
+            }
+            
+            resultDiv.innerHTML = `<pre>${content}</pre>`;
+            resultDiv.style.display = 'block';
+        }
+        
+        // Update quiz mark requirement based on exam type
+        document.getElementById('is_general_exam').addEventListener('change', function() {
+            const quizMarkInput = document.getElementById('quiz_mark');
+            if (this.checked) {
+                quizMarkInput.required = true;
+                quizMarkInput.placeholder = 'Required for general exam';
+            } else {
+                quizMarkInput.required = false;
+                quizMarkInput.placeholder = 'Optional';
+            }
+        });
+    </script>
+</body>
+</html>
+

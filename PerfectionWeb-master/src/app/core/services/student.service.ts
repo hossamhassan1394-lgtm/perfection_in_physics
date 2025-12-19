@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface Student {
   id: string;
@@ -41,28 +44,57 @@ const MOCK_STUDENTS: Student[] = [
   providedIn: 'root'
 })
 export class StudentService {
-  
+  constructor(private http: HttpClient, private authService: AuthService) { }
+
   /**
-   * Get students for the logged-in parent
+   * Get students for the logged-in parent from backend API
    */
   getStudentsForParent(): Observable<Student[]> {
-    // For demo purposes, return first 2 students
-    const students = MOCK_STUDENTS.slice(0, 2);
-    return of(students).pipe(delay(300));
+    const user = this.authService.getCurrentUser();
+    if (!user || !user.identifier) return of([]);
+
+    const params = new HttpParams().set('phone_number', user.identifier);
+    return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/parent/students`, { params }).pipe(
+      map(resp => resp.students || []),
+      catchError(() => of([]))
+    );
   }
 
   /**
    * Get all students (for admin)
    */
   getAllStudents(): Observable<Student[]> {
-    return of(MOCK_STUDENTS).pipe(delay(300));
+    return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/students`).pipe(
+      map(resp => resp.students || []),
+      catchError(() => of(MOCK_STUDENTS))
+    );
   }
 
   /**
    * Get student by ID
    */
   getStudentById(id: string): Observable<Student | undefined> {
-    const student = MOCK_STUDENTS.find(s => s.id === id);
-    return of(student).pipe(delay(200));
+    const user = this.authService.getCurrentUser();
+    if (!user || !user.identifier) return of(undefined);
+
+    const params = new HttpParams().set('phone_number', user.identifier);
+    return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/parent/students`, { params }).pipe(
+      map(resp => (resp.students || []).find(s => s.id === id)),
+      catchError(() => of(undefined))
+    );
+  }
+
+  /**
+   * Get sessions for a given student for the logged-in parent
+   */
+  getSessionsForStudent(studentId: string): Observable<any[]> {
+    const user = this.authService.getCurrentUser();
+    if (!user || !user.identifier) return of([]);
+
+    const params = new HttpParams().set('phone_number', user.identifier).set('student_id', studentId);
+    return this.http.get<{ sessions: any[] }>(`${environment.apiUrl}/parent/sessions`, { params }).pipe(
+      map(resp => resp.sessions || []),
+      catchError(() => of([]))
+    );
   }
 }

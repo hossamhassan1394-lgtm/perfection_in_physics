@@ -1,13 +1,9 @@
 import { Injectable, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
-// Mock data simulating Excel sheet of parent phone numbers
-const PARENT_ACCOUNTS = [
-  { phone: '+20 100-0000-000', password: '123456', needsPasswordReset: true, name: 'Parent 1', students: [1, 2] },
-  { phone: '+20 101-1111-111', password: '123456', needsPasswordReset: true, name: 'Parent 2', students: [3] },
-  { phone: '+20 102-2222-222', password: '123456', needsPasswordReset: true, name: 'Parent 3', students: [4, 5] },
-];
-
+// Admin accounts (still using mock for now)
 const ADMIN_ACCOUNTS = [
   { username: 'admin', password: 'admin123', name: 'Admin User' }
 ];
@@ -43,131 +39,202 @@ export class AuthService {
   private readonly PASSWORD_STORAGE_KEY = 'physics_portal_passwords';
   private readonly REMEMBER_ME_KEY = 'physics_portal_remember_me';
 
-  constructor() {
+  constructor(private http: HttpClient) {
     // Load user from localStorage ONLY if "Remember Me" was checked
     this.loadUserFromStorage();
   }
 
+  private normalizePhone(phone: string): string {
+    if (!phone) return '';
+    const cleaned = (phone || '').toString().replace(/\D/g, '');
+    let s = cleaned;
+    if (s.startsWith('00')) s = s.slice(2);
+    if (s.startsWith('20') && s.length >= 11) {
+      const candidate = '0' + s.slice(2);
+      if (candidate.startsWith('01') && candidate.length === 11) return candidate;
+    }
+    if (s.length === 11 && s.startsWith('01')) return s;
+    if (s.length === 10 && s.startsWith('1')) return '0' + s;
+    if (s.length > 11) {
+      const last10 = s.slice(-10);
+      if (last10.startsWith('1')) return '0' + last10;
+    }
+    return s;
+  }
+
   /**
-   * Login method - simulates backend authentication
+   * Login method - authenticates with backend API
    */
   login(credentials: LoginCredentials): Observable<LoginResponse> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        if (credentials.userType === 'parent') {
-          const account = this.findParentAccount(credentials.identifier, credentials.password);
-          
-          if (account) {
-            const user: User = {
-              identifier: account.phone,
-              name: account.name,
-              type: 'parent',
-              needsPasswordReset: account.needsPasswordReset,
-              students: account.students
-            };
-            
-            this.currentUser.set(user);
-            
-            // Save to storage only if "Remember Me" is checked
-            if (credentials.rememberMe) {
-              this.saveUserToStorage(user, true);
+    if (credentials.userType === 'parent') {
+      // Authenticate parent with backend API
+      return new Observable(observer => {
+        const phone = this.normalizePhone(credentials.identifier);
+        this.http.post<{
+          success: boolean;
+          user?: { phone_number: string; name: string; needs_password_reset: boolean };
+          needs_password_reset?: boolean;
+          message?: string;
+        }>(`${environment.apiUrl}/auth/login`, {
+          phone_number: phone,
+          password: credentials.password
+        }).subscribe({
+          next: (response) => {
+            if (response.success && response.user) {
+              const userPhone = this.normalizePhone(response.user.phone_number || phone);
+              const user: User = {
+                identifier: userPhone,
+                name: response.user.name || '',
+                type: 'parent',
+                needsPasswordReset: response.needs_password_reset || response.user.needs_password_reset || false
+              };
+
+              this.currentUser.set(user);
+
+              // Save to storage only if "Remember Me" is checked
+              if (credentials.rememberMe) {
+                this.saveUserToStorage(user, true);
+              } else {
+                this.saveUserToStorage(user, false);
+              }
+
+              observer.next({
+                success: true,
+                needsPasswordReset: user.needsPasswordReset,
+                user
+              });
             } else {
-              this.saveUserToStorage(user, false);
+              observer.next({
+                success: false,
+                message: response.message || 'Invalid phone number or password'
+              });
             }
-            
-            observer.next({
-              success: true,
-              needsPasswordReset: account.needsPasswordReset,
-              user
-            });
-          } else {
+            observer.complete();
+          },
+          error: (error) => {
             observer.next({
               success: false,
-              message: 'Invalid phone number or password'
+              message: error.error?.message || 'Invalid phone number or password'
             });
+            observer.complete();
           }
-        } else {
-          const account = ADMIN_ACCOUNTS.find(
-            acc => acc.username === credentials.identifier && acc.password === credentials.password
-          );
-          
-          if (account) {
-            const user: User = {
-              identifier: account.username,
-              name: account.name,
-              type: 'admin'
-            };
-            
-            this.currentUser.set(user);
-            
-            // Save to storage only if "Remember Me" is checked
-            if (credentials.rememberMe) {
-              this.saveUserToStorage(user, true);
+        });
+      });
+    } else {
+      // Admin login via backend API
+      return new Observable(observer => {
+        this.http.post<{ success: boolean; user?: { username: string; name?: string }; message?: string }>(
+          `${environment.apiUrl}/admin/login`,
+          {
+            username: credentials.identifier,
+            password: credentials.password
+          }
+        ).subscribe({
+          next: (response) => {
+            if (response.success && response.user) {
+              const user: User = {
+                identifier: response.user.username,
+                name: response.user.name || '',
+                type: 'admin'
+              };
+
+              this.currentUser.set(user);
+
+              if (credentials.rememberMe) {
+                this.saveUserToStorage(user, true);
+              } else {
+                this.saveUserToStorage(user, false);
+              }
+
+              observer.next({ success: true, user });
             } else {
-              this.saveUserToStorage(user, false);
+              observer.next({ success: false, message: response.message || 'Invalid admin credentials' });
             }
-            
-            observer.next({
-              success: true,
-              user
-            });
-          } else {
-            observer.next({
-              success: false,
-              message: 'Invalid admin credentials'
-            });
+            observer.complete();
+          },
+          error: (error) => {
+            observer.next({ success: false, message: error.error?.message || 'Invalid admin credentials' });
+            observer.complete();
           }
-        }
-        
-        observer.complete();
-      }, 500);
-    });
+        });
+      });
+    }
   }
 
   /**
    * Reset password for first-time login
    */
   resetPassword(newPassword: string): Observable<{ success: boolean; message?: string }> {
-    return new Observable(observer => {
-      setTimeout(() => {
-        const user = this.currentUser();
-        
-        if (!user) {
-          observer.next({
-            success: false,
-            message: 'No user logged in'
-          });
-          observer.complete();
-          return;
-        }
+    const user = this.currentUser();
 
-        if (newPassword.length < 6) {
-          observer.next({
-            success: false,
-            message: 'Password must be at least 6 characters'
-          });
-          observer.complete();
-          return;
-        }
+    if (!user) {
+      return of({
+        success: false,
+        message: 'No user logged in'
+      });
+    }
 
-        // Update password in mock storage
-        this.updateParentPassword(user.identifier, newPassword);
-        
-        // Update user state
-        const updatedUser = { ...user, needsPasswordReset: false };
-        this.currentUser.set(updatedUser);
-        
-        // Update storage with new user state
-        const rememberMe = this.isRememberMeEnabled();
-        this.saveUserToStorage(updatedUser, rememberMe);
-        
-        observer.next({
-          success: true,
-          message: 'Password updated successfully'
+    if (newPassword.length < 6) {
+      return of({
+        success: false,
+        message: 'Password must be at least 6 characters'
+      });
+    }
+
+    if (user.type === 'parent') {
+      // Reset password via backend API
+      return new Observable(observer => {
+        const phone = this.normalizePhone(user.identifier || '');
+        this.http.post<{ success: boolean; message?: string }>(`${environment.apiUrl}/auth/reset-password`, {
+          phone_number: phone,
+          new_password: newPassword
+        }).subscribe({
+          next: (response) => {
+            if (response.success) {
+              // Update user state
+              const updatedUser = { ...user, needsPasswordReset: false };
+              this.currentUser.set(updatedUser);
+
+              // Update storage with new user state
+              const rememberMe = this.isRememberMeEnabled();
+              this.saveUserToStorage(updatedUser, rememberMe);
+            }
+            observer.next(response);
+            observer.complete();
+          },
+          error: (error) => {
+            observer.next({
+              success: false,
+              message: error.error?.message || 'Failed to update password'
+            });
+            observer.complete();
+          }
         });
-        observer.complete();
-      }, 300);
-    });
+      });
+    } else {
+      // Admin password reset via backend API
+      return new Observable(observer => {
+        this.http.post<{ success: boolean; message?: string }>(`${environment.apiUrl}/admin/reset-password`, {
+          username: user.identifier,
+          new_password: newPassword
+        }).subscribe({
+          next: (response) => {
+            if (response.success) {
+              const updatedUser = { ...user, needsPasswordReset: false };
+              this.currentUser.set(updatedUser);
+              const rememberMe = this.isRememberMeEnabled();
+              this.saveUserToStorage(updatedUser, rememberMe);
+            }
+            observer.next(response);
+            observer.complete();
+          },
+          error: (error) => {
+            observer.next({ success: false, message: error.error?.message || 'Failed to update password' });
+            observer.complete();
+          }
+        });
+      });
+    }
   }
 
   /**
@@ -216,38 +283,7 @@ export class AuthService {
     return user?.needsPasswordReset ?? false;
   }
 
-  // Private helper methods
-
-  private findParentAccount(phone: string, password: string) {
-    // First check if there's a custom password stored
-    const customPasswords = this.getCustomPasswords();
-    const customPassword = customPasswords[phone];
-    
-    if (customPassword) {
-      // User has already reset their password
-      if (customPassword === password) {
-        const account = PARENT_ACCOUNTS.find(acc => acc.phone === phone);
-        return account ? { ...account, needsPasswordReset: false } : null;
-      }
-      return null;
-    }
-    
-    // Check default password (first-time login)
-    return PARENT_ACCOUNTS.find(
-      acc => acc.phone === phone && acc.password === password
-    );
-  }
-
-  private updateParentPassword(phone: string, newPassword: string): void {
-    const customPasswords = this.getCustomPasswords();
-    customPasswords[phone] = newPassword;
-    localStorage.setItem(this.PASSWORD_STORAGE_KEY, JSON.stringify(customPasswords));
-  }
-
-  private getCustomPasswords(): Record<string, string> {
-    const stored = localStorage.getItem(this.PASSWORD_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  }
+  // Private helper methods (no longer needed for parent auth, but keeping for admin)
 
   private saveUserToStorage(user: User, rememberMe: boolean): void {
     if (rememberMe) {
@@ -263,7 +299,7 @@ export class AuthService {
   private loadUserFromStorage(): void {
     // Only auto-load if "Remember Me" was checked
     const rememberMe = localStorage.getItem(this.REMEMBER_ME_KEY) === 'true';
-    
+
     if (!rememberMe) {
       // Clear any existing session
       localStorage.removeItem(this.STORAGE_KEY);

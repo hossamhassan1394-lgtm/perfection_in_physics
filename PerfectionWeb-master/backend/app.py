@@ -1,0 +1,885 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+import pandas as pd
+from datetime import datetime
+import traceback
+
+# Load environment variables
+load_dotenv()
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS for Angular frontend
+
+# Configuration
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Create uploads directory if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Supabase configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in .env file")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Allowed groups
+ALLOWED_GROUPS = ['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3']
+
+# Allowed session numbers
+ALLOWED_SESSIONS = list(range(1, 9))  # 1 to 8
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def normalize_phone(phone: str) -> str:
+    """Normalize phone numbers to local format starting with '01' and 11 digits when possible.
+    Examples:
+      +201012345678 -> 01012345678
+      201012345678 -> 01012345678
+      01012345678 -> 01012345678
+      1012345678   -> 01012345678
+    """
+    if not phone:
+        return ''
+
+    # Keep only digits
+    cleaned = ''.join(ch for ch in phone if ch.isdigit())
+    if cleaned.startswith('00'):
+        cleaned = cleaned[2:]
+
+    # If it has country code 20 (Egypt), convert to local starting with 0
+    if cleaned.startswith('20') and len(cleaned) >= 11:
+        candidate = '0' + cleaned[2:]
+        if candidate.startswith('01') and len(candidate) == 11:
+            return candidate
+
+    # If it's already local 11-digit starting with 01
+    if len(cleaned) == 11 and cleaned.startswith('01'):
+        return cleaned
+
+    # If it's 10 digits starting with 1 (missing leading zero)
+    if len(cleaned) == 10 and cleaned.startswith('1'):
+        return '0' + cleaned
+
+    # As a last resort, if cleaned ends with 10 digits starting with '1', use that
+    if len(cleaned) > 11 and cleaned[-10].isdigit():
+        last10 = cleaned[-10:]
+        if last10.startswith('1'):
+            return '0' + last10
+
+    return cleaned
+
+def parse_general_exam_sheet(file_path):
+    """
+    Parse general exam Excel sheet
+    Columns: id, name, .Parent No, shamel (a, p), Q
+    """
+    try:
+        # Try reading with header=0 first
+        df = pd.read_excel(file_path, header=0)
+        
+        # Clean column names (remove spaces, handle special characters)
+        df.columns = df.columns.astype(str).str.strip()
+        
+        # Find the actual column names (they might have variations)
+        id_col = None
+        name_col = None
+        parent_col = None
+        shamel_a_col = None
+        shamel_p_col = None
+        q_col = None
+        
+        # First pass: find main columns
+        for col in df.columns:
+            col_lower = str(col).lower().strip()
+            if 'id' in col_lower and id_col is None and col_lower != 'parent':
+                id_col = col
+            elif 'name' in col_lower and name_col is None:
+                name_col = col
+            elif 'parent' in col_lower and parent_col is None:
+                parent_col = col
+            elif col_lower == 'q' or col_lower.strip() == 'q':
+                q_col = col
+        
+        # Second pass: find shamel columns (a and p)
+        # These might be separate columns or under a merged header
+        col_list = list(df.columns)
+        for i, col in enumerate(col_list):
+            col_lower = str(col).lower().strip()
+            # Check if this is column 'a' and might be under shamel
+            if (col_lower == 'a' or 'a' in col_lower) and shamel_a_col is None:
+                # Check previous column for 'shamel' or if it's in a typical position
+                if i > 0:
+                    prev_col = str(col_list[i-1]).lower()
+                    if 'shamel' in prev_col or 'parent' in prev_col:
+                        shamel_a_col = col
+                else:
+                    # If it's after parent column, likely shamel a
+                    if parent_col and col_list.index(col) > col_list.index(parent_col):
+                        shamel_a_col = col
+            
+            # Check if this is column 'p' and might be under shamel
+            if (col_lower == 'p' or col_lower.strip() == 'p') and shamel_p_col is None and col != shamel_a_col:
+                # Check if it's right after shamel_a_col or in typical position
+                if shamel_a_col:
+                    if col_list.index(col) == col_list.index(shamel_a_col) + 1:
+                        shamel_p_col = col
+                elif i > 0:
+                    prev_col = str(col_list[i-1]).lower()
+                    if 'shamel' in prev_col or 'a' in prev_col:
+                        shamel_p_col = col
+        
+        # Fallback: if shamel columns not found, try by position after parent
+        if parent_col:
+            parent_idx = col_list.index(parent_col)
+            # Usually shamel a and p come right after parent
+            if parent_idx + 1 < len(col_list) and shamel_a_col is None:
+                potential_a = col_list[parent_idx + 1]
+                if 'a' in str(potential_a).lower() or str(potential_a).strip() == 'a':
+                    shamel_a_col = potential_a
+            if parent_idx + 2 < len(col_list) and shamel_p_col is None:
+                potential_p = col_list[parent_idx + 2]
+                if 'p' in str(potential_p).lower() or str(potential_p).strip() == 'p':
+                    shamel_p_col = potential_p
+        
+        if not all([id_col, name_col, parent_col, q_col]):
+            raise ValueError(f"Required columns not found in general exam sheet. Found: {list(df.columns)}")
+        
+        records = []
+        for _, row in df.iterrows():
+            # Skip empty rows
+            if pd.isna(row[id_col]) or str(row[id_col]).strip() == '':
+                continue
+            
+            try:
+                # Handle parent_no conversion
+                parent_no_val = row[parent_col]
+                if pd.isna(parent_no_val):
+                    parent_no_str = ''
+                else:
+                    # Try to convert to int, but handle if it's already a string
+                    try:
+                        parent_no_str = str(int(float(parent_no_val)))
+                    except:
+                        parent_no_str = str(parent_no_val).strip()
+                
+                record = {
+                    'id': str(row[id_col]).strip(),
+                    'name': str(row[name_col]).strip() if not pd.isna(row[name_col]) else '',
+                    'parent_no': parent_no_str,
+                    'attendance': 1 if shamel_a_col and not pd.isna(row[shamel_a_col]) and (row[shamel_a_col] == 1 or str(row[shamel_a_col]).strip() == '1') else 0,
+                    'payment': 1 if shamel_p_col and not pd.isna(row[shamel_p_col]) and (row[shamel_p_col] == 1 or str(row[shamel_p_col]).strip() == '1') else 0,
+                    'quiz_mark': float(row[q_col]) if not pd.isna(row[q_col]) else None
+                }
+                records.append(record)
+            except Exception as e:
+                # Skip rows with errors but continue processing
+                print(f"Warning: Error processing row {row.get(id_col, 'unknown')}: {str(e)}")
+                continue
+        
+        return records
+    except Exception as e:
+        raise Exception(f"Error parsing general exam sheet: {str(e)}")
+
+def parse_normal_lecture_sheet(file_path):
+    """
+    Parse normal lecture Excel sheet
+    Columns: id, name, pokin, student no., Parent No., a, p, Q, time, s1
+    """
+    try:
+        df = pd.read_excel(file_path, header=0)
+        
+        # Clean column names
+        df.columns = df.columns.astype(str).str.strip()
+        
+        # Find columns
+        id_col = None
+        name_col = None
+        pokin_col = None
+        student_no_col = None
+        parent_col = None
+        a_col = None
+        p_col = None
+        q_col = None
+        time_col = None
+        s1_col = None
+        
+        for col in df.columns:
+            col_lower = str(col).lower().strip()
+            if 'id' in col_lower and id_col is None and col_lower != 'parent' and 'student' not in col_lower:
+                id_col = col
+            elif 'name' in col_lower and name_col is None:
+                name_col = col
+            elif 'pokin' in col_lower and pokin_col is None:
+                pokin_col = col
+            elif 'student' in col_lower and 'no' in col_lower and student_no_col is None:
+                student_no_col = col
+            elif 'parent' in col_lower and 'no' in col_lower and parent_col is None:
+                parent_col = col
+            elif col_lower == 'a' and a_col is None:
+                a_col = col
+            elif col_lower == 'p' and p_col is None:
+                p_col = col
+            elif col_lower == 'q' and q_col is None:
+                q_col = col
+            elif 'time' in col_lower and time_col is None:
+                time_col = col
+            elif col_lower == 's1' and s1_col is None:
+                s1_col = col
+        
+        if not all([id_col, name_col, parent_col]):
+            raise ValueError(f"Required columns not found in normal lecture sheet. Found: {list(df.columns)}")
+        
+        records = []
+        for _, row in df.iterrows():
+            if pd.isna(row[id_col]) or str(row[id_col]).strip() == '':
+                continue
+            
+            try:
+                # Parse time if available
+                finish_time = None
+                if time_col and not pd.isna(row[time_col]):
+                    try:
+                        if isinstance(row[time_col], datetime):
+                            finish_time = row[time_col].strftime('%Y-%m-%d %H:%M:%S')
+                        elif isinstance(row[time_col], pd.Timestamp):
+                            finish_time = row[time_col].strftime('%Y-%m-%d %H:%M:%S')
+                        else:
+                            finish_time = str(row[time_col]).strip()
+                    except:
+                        finish_time = str(row[time_col]).strip()
+                
+                # Handle parent_no conversion
+                parent_no_val = row[parent_col]
+                if pd.isna(parent_no_val):
+                    parent_no_str = ''
+                else:
+                    try:
+                        parent_no_str = str(int(float(parent_no_val)))
+                    except:
+                        parent_no_str = str(parent_no_val).strip()
+                
+                # Handle student_no conversion
+                student_no_str = None
+                if student_no_col and not pd.isna(row[student_no_col]):
+                    try:
+                        student_no_str = str(int(float(row[student_no_col])))
+                    except:
+                        student_no_str = str(row[student_no_col]).strip()
+                
+                record = {
+                    'id': str(row[id_col]).strip(),
+                    'name': str(row[name_col]).strip() if not pd.isna(row[name_col]) else '',
+                    'pokin': float(row[pokin_col]) if pokin_col and not pd.isna(row[pokin_col]) else None,
+                    'student_no': student_no_str,
+                    'parent_no': parent_no_str,
+                    'attendance': 1 if a_col and not pd.isna(row[a_col]) and (row[a_col] == 1 or str(row[a_col]).strip() == '1') else 0,
+                    'payment': float(row[p_col]) if p_col and not pd.isna(row[p_col]) else None,
+                    'quiz_mark': float(row[q_col]) if q_col and not pd.isna(row[q_col]) else None,
+                    'finish_time': finish_time,
+                    'homework_status': None
+                }
+                
+                # Parse s1 (homework status)
+                # null/empty = completed (0), 1 = no hw, 2 = not completed, 3 = cheated
+                if s1_col and not pd.isna(row[s1_col]):
+                    s1_value = row[s1_col]
+                    if pd.isna(s1_value) or str(s1_value).strip() == '':
+                        record['homework_status'] = 0  # completed
+                    else:
+                        try:
+                            record['homework_status'] = int(float(s1_value))
+                        except:
+                            record['homework_status'] = None
+                else:
+                    record['homework_status'] = 0  # completed (null means completed)
+                
+                records.append(record)
+            except Exception as e:
+                # Skip rows with errors but continue processing
+                print(f"Warning: Error processing row {row.get(id_col, 'unknown')}: {str(e)}")
+                continue
+        
+        return records
+    except Exception as e:
+        raise Exception(f"Error parsing normal lecture sheet: {str(e)}")
+
+def create_or_update_parent(parent_no, student_name=None):
+    """
+    Create or update parent account in parents table
+    Default password is '123456' and needs_password_reset is True
+    """
+    if not parent_no or parent_no.strip() == '':
+        return
+
+    parent_no_norm = normalize_phone(parent_no)
+    
+    try:
+        # Check if parent exists
+        existing = supabase.table('parents').select('*').eq('phone_number', parent_no_norm).execute()
+        
+        if existing.data and len(existing.data) > 0:
+            # Parent exists, no need to update
+            return
+        else:
+            # Create new parent account
+            parent_data = {
+                'phone_number': parent_no_norm,
+                'password_hash': '123456',  # Default password (in production, hash this)
+                'needs_password_reset': True,
+                'name': student_name or f'Parent {parent_no_norm}'
+            }
+            supabase.table('parents').insert(parent_data).execute()
+    except Exception as e:
+        # Silently fail parent creation - don't block the main upload
+        print(f"Warning: Could not create parent account for {parent_no}: {str(e)}")
+
+def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam):
+    """
+    Update database with parsed records
+    """
+    try:
+        updated_count = 0
+        errors = []
+        parents_created = set()  # Track parents we've already created
+        
+        for record in records:
+            try:
+                # Create parent account if parent_no exists
+                parent_no_raw = record.get('parent_no', '') or ''
+                parent_no = normalize_phone(parent_no_raw)
+                if parent_no and parent_no not in parents_created:
+                    create_or_update_parent(parent_no, record.get('name'))
+                    parents_created.add(parent_no)
+                
+                # Determine quiz_mark: for general exam use provided value, for normal lecture use Excel value or provided value
+                final_quiz_mark = None
+                if is_general_exam:
+                    final_quiz_mark = quiz_mark
+                else:
+                    # For normal lecture, prefer Excel value, fallback to provided value
+                    final_quiz_mark = record.get('quiz_mark')
+                    if final_quiz_mark is None:
+                        final_quiz_mark = quiz_mark
+                
+                # Determine finish_time: use provided value or Excel value
+                final_finish_time = finish_time if finish_time else record.get('finish_time')
+                
+                # Prepare data for database (only include non-None values)
+                db_data = {
+                    'student_id': record['id'],
+                    'student_name': record.get('name', ''),
+                    'parent_no': parent_no,
+                    'session_number': session_number,
+                    'group_name': group,
+                    'is_general_exam': is_general_exam,
+                    'attendance': record.get('attendance', 0),
+                    'payment': record.get('payment', 0) or 0,
+                }
+                
+                # Add optional fields only if they have values
+                if final_quiz_mark is not None:
+                    db_data['quiz_mark'] = float(final_quiz_mark)
+                
+                if final_finish_time:
+                    db_data['finish_time'] = final_finish_time
+                
+                if record.get('homework_status') is not None:
+                    db_data['homework_status'] = record.get('homework_status')
+                
+                if record.get('pokin') is not None:
+                    db_data['pokin'] = float(record.get('pokin'))
+                
+                if record.get('student_no'):
+                    db_data['student_no'] = record.get('student_no')
+                
+                # Check if record exists (by student_id, session_number, group, is_general_exam)
+                try:
+                    existing = supabase.table('session_records').select('*').eq('student_id', record['id']).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                    
+                    if existing.data and len(existing.data) > 0:
+                        # Update existing record
+                        result = supabase.table('session_records').update(db_data).eq('student_id', record['id']).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                    else:
+                        # Insert new record
+                        result = supabase.table('session_records').insert(db_data).execute()
+                    
+                    updated_count += 1
+                except Exception as db_error:
+                    error_msg = str(db_error)
+                    # Check if it's a unique constraint violation (record already exists)
+                    if 'duplicate' in error_msg.lower() or 'unique' in error_msg.lower():
+                        # Try update instead
+                        try:
+                            result = supabase.table('session_records').update(db_data).eq('student_id', record['id']).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                            updated_count += 1
+                        except Exception as update_error:
+                            errors.append(f"Error updating record for {record.get('id', 'unknown')}: {str(update_error)}")
+                    else:
+                        errors.append(f"Error updating record for {record.get('id', 'unknown')}: {error_msg}")
+                    continue
+                    
+            except Exception as e:
+                errors.append(f"Error processing record for {record.get('id', 'unknown')}: {str(e)}")
+                continue
+        
+        return updated_count, errors
+    except Exception as e:
+        raise Exception(f"Error updating database: {str(e)}")
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({'status': 'ok', 'message': 'Flask backend is running'}), 200
+
+@app.route('/api/upload-excel', methods=['POST'])
+def upload_excel():
+    """
+    Upload and process Excel file
+    Expected form data:
+    - file: Excel file
+    - session_number: 1-8
+    - quiz_mark: number (for general exam)
+    - finish_time: datetime string
+    - group: cam1, maimi, cam2, west, station1, station2, station3
+    - is_general_exam: true/false
+    """
+    try:
+        # Validate required fields
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type. Only .xlsx and .xls files are allowed'}), 400
+        
+        # Get form data
+        session_number = request.form.get('session_number')
+        quiz_mark = request.form.get('quiz_mark')
+        finish_time = request.form.get('finish_time')
+        group = request.form.get('group')
+        is_general_exam = request.form.get('is_general_exam', 'false').lower() == 'true'
+        
+        # Validate session number
+        try:
+            session_number = int(session_number)
+            if session_number not in ALLOWED_SESSIONS:
+                return jsonify({'error': f'Session number must be between 1 and 8'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid session number'}), 400
+        
+        # Validate quiz mark (required for general exam)
+        if is_general_exam:
+            try:
+                quiz_mark = float(quiz_mark) if quiz_mark else None
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid quiz mark'}), 400
+        else:
+            quiz_mark = float(quiz_mark) if quiz_mark else None
+        
+        # Validate group
+        if not group or group not in ALLOWED_GROUPS:
+            return jsonify({'error': f'Invalid group. Must be one of: {", ".join(ALLOWED_GROUPS)}'}), 400
+        
+        # Save file
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        try:
+            # Parse Excel file based on type
+            if is_general_exam:
+                records = parse_general_exam_sheet(file_path)
+            else:
+                records = parse_normal_lecture_sheet(file_path)
+            
+            if not records:
+                return jsonify({'error': 'No records found in Excel file'}), 400
+            
+            # Update database
+            updated_count, errors = update_database(
+                records, 
+                session_number, 
+                quiz_mark, 
+                finish_time, 
+                group, 
+                is_general_exam
+            )
+            
+            # Clean up uploaded file
+            os.remove(file_path)
+            
+            response = {
+                'success': True,
+                'message': f'Successfully processed {updated_count} records',
+                'updated_count': updated_count,
+                'total_records': len(records)
+            }
+            
+            if errors:
+                response['errors'] = errors
+                response['error_count'] = len(errors)
+            
+            return jsonify(response), 200
+            
+        except Exception as e:
+            # Clean up file on error
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return jsonify({'error': f'Error processing file: {str(e)}', 'traceback': traceback.format_exc()}), 500
+        
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}', 'traceback': traceback.format_exc()}), 500
+
+@app.route('/api/groups', methods=['GET'])
+def get_groups():
+    """Get list of available groups"""
+    return jsonify({'groups': ALLOWED_GROUPS}), 200
+
+@app.route('/api/sessions', methods=['GET'])
+def get_sessions():
+    """Get list of available session numbers"""
+    return jsonify({'sessions': ALLOWED_SESSIONS}), 200
+
+
+@app.route('/api/parent/students', methods=['GET'])
+def get_parent_students():
+    """Return aggregated student list for a parent identified by phone_number="""
+    phone = request.args.get('phone_number')
+    if not phone:
+        return jsonify({'error': 'phone_number query parameter required'}), 400
+    phone = normalize_phone(phone)
+
+    try:
+        # Fetch all session records for this parent
+        result = supabase.table('session_records').select('*').eq('parent_no', phone).execute()
+        records = result.data or []
+
+        # Aggregate by student_id
+        students_map = {}
+        for r in records:
+            sid = r.get('student_id')
+            if not sid:
+                continue
+            entry = students_map.setdefault(sid, {
+                'id': sid,
+                'name': r.get('student_name') or '',
+                'grade': '',
+                'attendance_count': 0,
+                'records_count': 0,
+                'payments_sum': 0.0,
+                'quiz_sum': 0.0,
+                'quiz_count': 0
+            })
+
+            entry['records_count'] += 1
+            try:
+                entry['attendance_count'] += int(r.get('attendance') or 0)
+            except:
+                pass
+            try:
+                entry['payments_sum'] += float(r.get('payment') or 0)
+            except:
+                pass
+            try:
+                if r.get('quiz_mark') is not None:
+                    entry['quiz_sum'] += float(r.get('quiz_mark'))
+                    entry['quiz_count'] += 1
+            except:
+                pass
+
+        students = []
+        for sid, v in students_map.items():
+            attendance_pct = 0
+            if v['records_count'] > 0:
+                attendance_pct = round((v['attendance_count'] / v['records_count']) * 100)
+
+            # Assume per-session expected payment 140 if no better info
+            total_expected = v['records_count'] * 140
+            quizzes_avg = round((v['quiz_sum'] / v['quiz_count']), 2) if v['quiz_count'] > 0 else 0
+
+            students.append({
+                'id': v['id'],
+                'name': v['name'],
+                'grade': v.get('grade', ''),
+                'attendance': attendance_pct,
+                'payments': { 'paid': v['payments_sum'], 'total': total_expected },
+                'quizzes': { 'average': quizzes_avg, 'total': v['quiz_count'] }
+            })
+
+        return jsonify({'students': students}), 200
+    except Exception as e:
+        return jsonify({'error': f'Error fetching students: {str(e)}', 'traceback': traceback.format_exc()}), 500
+
+
+@app.route('/api/parent/sessions', methods=['GET'])
+def get_parent_sessions():
+    """Return session records for a parent and optional student_id query param"""
+    phone = request.args.get('phone_number')
+    student_id = request.args.get('student_id')
+    if not phone:
+        return jsonify({'error': 'phone_number query parameter required'}), 400
+    phone = normalize_phone(phone)
+
+    try:
+        query = supabase.table('session_records').select('*').eq('parent_no', phone)
+        if student_id:
+            query = query.eq('student_id', student_id)
+
+        result = query.execute()
+        records = result.data or []
+
+        sessions = []
+        for r in records:
+            # Map DB fields to frontend Session interface where possible
+            sessions.append({
+                'id': r.get('id') or r.get('student_no') or r.get('student_id'),
+                'chapter': r.get('session_number'),
+                'name': r.get('student_name') or f"Session {r.get('session_number')}",
+                'date': r.get('finish_time') or '',
+                'startTime': '',
+                'endTime': '',
+                'attendance': 'attended' if int(r.get('attendance') or 0) == 1 else 'missed',
+                'quizCorrect': int(r.get('quiz_mark') or 0),
+                'quizTotal': 15,
+                'payment': float(r.get('payment') or 0),
+                'homeworkStatus': 'completed' if (r.get('homework_status') in (0, None)) else 'pending'
+            })
+
+        # Sort by chapter/session_number descending
+        sessions = sorted(sessions, key=lambda s: s.get('chapter') or 0, reverse=True)
+
+        return jsonify({'sessions': sessions}), 200
+    except Exception as e:
+        return jsonify({'error': f'Error fetching sessions: {str(e)}', 'traceback': traceback.format_exc()}), 500
+
+
+@app.route('/api/students', methods=['GET'])
+def get_all_students():
+    """Return aggregated student list across all parents (for admin)"""
+    try:
+        result = supabase.table('session_records').select('*').execute()
+        records = result.data or []
+
+        students_map = {}
+        for r in records:
+            sid = r.get('student_id')
+            if not sid:
+                continue
+            entry = students_map.setdefault(sid, {
+                'id': sid,
+                'name': r.get('student_name') or '',
+                'grade': '',
+                'attendance_count': 0,
+                'records_count': 0,
+                'payments_sum': 0.0,
+                'quiz_sum': 0.0,
+                'quiz_count': 0
+            })
+
+            entry['records_count'] += 1
+            try:
+                entry['attendance_count'] += int(r.get('attendance') or 0)
+            except:
+                pass
+            try:
+                entry['payments_sum'] += float(r.get('payment') or 0)
+            except:
+                pass
+            try:
+                if r.get('quiz_mark') is not None:
+                    entry['quiz_sum'] += float(r.get('quiz_mark'))
+                    entry['quiz_count'] += 1
+            except:
+                pass
+
+        students = []
+        for sid, v in students_map.items():
+            attendance_pct = 0
+            if v['records_count'] > 0:
+                attendance_pct = round((v['attendance_count'] / v['records_count']) * 100)
+
+            total_expected = v['records_count'] * 140
+            quizzes_avg = round((v['quiz_sum'] / v['quiz_count']), 2) if v['quiz_count'] > 0 else 0
+
+            students.append({
+                'id': v['id'],
+                'name': v['name'],
+                'grade': v.get('grade', ''),
+                'attendance': attendance_pct,
+                'payments': { 'paid': v['payments_sum'], 'total': total_expected },
+                'quizzes': { 'average': quizzes_avg, 'total': v['quiz_count'] }
+            })
+
+        return jsonify({'students': students}), 200
+    except Exception as e:
+        return jsonify({'error': f'Error fetching all students: {str(e)}', 'traceback': traceback.format_exc()}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """
+    Parent login endpoint
+    Expected JSON:
+    {
+        "phone_number": "01234567890",
+        "password": "123456"
+    }
+    """
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not phone_number or not password:
+            return jsonify({'success': False, 'message': 'Phone number and password are required'}), 400
+        
+        # Normalize phone and find parent by phone number
+        phone_number = normalize_phone(phone_number)
+        result = supabase.table('parents').select('*').eq('phone_number', phone_number).execute()
+        
+        if not result.data or len(result.data) == 0:
+            return jsonify({'success': False, 'message': 'Invalid phone number or password'}), 401
+        
+        parent = result.data[0]
+        
+        # Check password (in production, use proper password hashing)
+        if parent['password_hash'] != password:
+            return jsonify({'success': False, 'message': 'Invalid phone number or password'}), 401
+        
+        # Update last login
+        try:
+            supabase.table('parents').update({'last_login': datetime.now().isoformat()}).eq('phone_number', phone_number).execute()
+        except:
+            pass  # Don't fail login if update fails
+        
+        # Return user data
+        return jsonify({
+            'success': True,
+            'user': {
+                'phone_number': parent['phone_number'],
+                'name': parent.get('name', ''),
+                'needs_password_reset': parent.get('needs_password_reset', True)
+            },
+            'needs_password_reset': parent.get('needs_password_reset', True)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Login error: {str(e)}'}), 500
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Reset password endpoint
+    Expected JSON:
+    {
+        "phone_number": "01234567890",
+        "new_password": "newpassword123"
+    }
+    """
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number', '').strip()
+        new_password = data.get('new_password', '').strip()
+        
+        if not phone_number or not new_password:
+            return jsonify({'success': False, 'message': 'Phone number and new password are required'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+        
+        # Normalize phone and find parent
+        phone_number = normalize_phone(phone_number)
+        result = supabase.table('parents').select('*').eq('phone_number', phone_number).execute()
+        
+        if not result.data or len(result.data) == 0:
+            return jsonify({'success': False, 'message': 'Parent not found'}), 404
+        
+        # Update password (in production, hash the password)
+        supabase.table('parents').update({
+            'password_hash': new_password,
+            'needs_password_reset': False
+        }).eq('phone_number', phone_number).execute()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password updated successfully'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error updating password: {str(e)}'}), 500
+
+
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    """Admin login endpoint. Expects JSON: { username, password }"""
+    try:
+        data = request.get_json() or {}
+        username = (data.get('username') or '').strip()
+        password = (data.get('password') or '').strip()
+
+        if not username or not password:
+            return jsonify({'success': False, 'message': 'Username and password are required'}), 400
+
+        # Try admins table first
+        try:
+            result = supabase.table('admins').select('*').eq('username', username).execute()
+            if result.data and len(result.data) > 0:
+                admin = result.data[0]
+                if admin.get('password_hash') == password:
+                    return jsonify({'success': True, 'user': {'username': admin.get('username'), 'name': admin.get('name', '')}}), 200
+                else:
+                    return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
+        except Exception:
+            # If admins table does not exist or query fails, fallthrough to default
+            pass
+
+        # Fallback: no admin record found
+        return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Admin login error: {str(e)}'}), 500
+
+
+@app.route('/api/admin/reset-password', methods=['POST'])
+def admin_reset_password():
+    """Admin password reset. Expects JSON: { username, new_password }"""
+    try:
+        data = request.get_json() or {}
+        username = (data.get('username') or '').strip()
+        new_password = (data.get('new_password') or '').strip()
+
+        if not username or not new_password:
+            return jsonify({'success': False, 'message': 'Username and new password are required'}), 400
+
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+
+        # Update admins table
+        try:
+            result = supabase.table('admins').select('*').eq('username', username).execute()
+            if not result.data or len(result.data) == 0:
+                return jsonify({'success': False, 'message': 'Admin user not found'}), 404
+
+            supabase.table('admins').update({'password_hash': new_password}).eq('username', username).execute()
+            return jsonify({'success': True, 'message': 'Password updated successfully'}), 200
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Error updating admin password: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error updating admin password: {str(e)}'}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
+

@@ -1,5 +1,6 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withDebugTracing } from '@angular/router';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -8,6 +9,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withDebugTracing() // Enable router debugging - REMOVE in production!
-    )
+    ),
+    provideHttpClient(withInterceptorsFromDi())
   ]
 };

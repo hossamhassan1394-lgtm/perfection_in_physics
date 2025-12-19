@@ -1,8 +1,8 @@
 import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { 
-  LucideAngularModule, 
+import {
+  LucideAngularModule,
   Users,
   TrendingUp,
   DollarSign,
@@ -11,8 +11,7 @@ import {
 // import { TopNavComponent } from '../../../shared/components/top-nav/top-nav.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { StudentService, Student } from '../../../core/services/student.service';
-
-
+import { ExcelUploadComponent } from '../excel-upload/excel-upload.component';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -20,6 +19,7 @@ import { StudentService, Student } from '../../../core/services/student.service'
   imports: [
     CommonModule,
     LucideAngularModule,
+    ExcelUploadComponent
     // TopNavComponent
   ],
   templateUrl: './admin-dashboard.component.html',
@@ -62,21 +62,21 @@ export class AdminDashboardComponent implements OnInit {
     private router: Router,
     private authService: AuthService,
     private studentService: StudentService
-  ) {}
+  ) { }
 
- ngOnInit(): void {
-  if (!this.authService.isLoggedIn()) {
-    this.router.navigate(['/login']);
-    return;
+  ngOnInit(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    if (this.authService.getUserType() !== 'admin') {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    this.loadAllStudents();
   }
-
-  if (this.authService.getUserType() !== 'admin') {
-    this.router.navigate(['/dashboard']);
-    return;
-  }
-
-  this.loadAllStudents();
-}
 
   loadAllStudents(): void {
     this.studentService.getAllStudents().subscribe({
