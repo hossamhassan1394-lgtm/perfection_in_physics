@@ -822,6 +822,51 @@ def login():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Login error: {str(e)}'}), 500
 
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Reset password for first-time login.
+    Expected JSON:
+    {
+        "phone_number": "01234567890",
+        "new_password": "newpassword123"
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        phone_number = (data.get('phone_number') or '').strip()
+        new_password = (data.get('new_password') or '').strip()
+
+        if not phone_number or not new_password:
+            return jsonify({'success': False, 'message': 'Phone number and new password are required'}), 400
+
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+
+        phone_number = normalize_phone(phone_number)
+
+        # Find parent
+        result = supabase.table('parents').select('*').eq('phone_number', phone_number).execute()
+        if not result.data or len(result.data) == 0:
+            return jsonify({'success': False, 'message': 'Parent not found'}), 404
+
+        try:
+            update_result = supabase.table('parents').update({
+                'password_hash': new_password,
+                'needs_password_reset': False
+            }).eq('phone_number', phone_number).execute()
+
+            if update_result and update_result.data:
+                return jsonify({'success': True, 'message': 'Password updated successfully'}), 200
+            else:
+                return jsonify({'success': False, 'message': 'Failed to update password'}), 500
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Error updating password: {str(e)}'}), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Reset password error: {str(e)}'}), 500
+
 @app.route('/api/auth/change-password', methods=['POST'])
 def change_password():
     """

@@ -1,7 +1,8 @@
 import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, Location } from '@angular/router';
+import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 import {
   LucideAngularModule,
   Eye,
