@@ -1413,6 +1413,20 @@ def get_upload_log():
         logger.exception(f"Error reading log file: {str(e)}")
         return jsonify({'error': f'Error reading log file: {str(e)}'}), 500
 
+
+@app.route('/api/upload-log/download', methods=['GET'])
+def download_upload_log():
+    """Serve the uploads.log file as a downloadable attachment."""
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({'error': 'Log file not found'}), 404
+
+        # Use send_file to return as attachment
+        return send_file(LOG_FILE, as_attachment=True, download_name=os.path.basename(LOG_FILE), mimetype='text/plain')
+    except Exception as e:
+        logger.exception(f"Error sending log file: {str(e)}")
+        return jsonify({'error': f'Error sending log file: {str(e)}'}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 

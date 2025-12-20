@@ -164,4 +164,29 @@ export class AdminDashboardComponent implements OnInit {
       console.error('✗ Logout error:', error);
     }
   }
+
+  // Download uploads.log from backend
+  async downloadLog(): Promise<void> {
+    try {
+      const resp = await fetch('/api/upload-log/download', { method: 'GET' });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        console.error('Failed to download log:', resp.status, txt);
+        return;
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'uploads.log';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      console.log('Log download started');
+    } catch (err) {
+      console.error('Error downloading log:', err);
+    }
+  }
 }

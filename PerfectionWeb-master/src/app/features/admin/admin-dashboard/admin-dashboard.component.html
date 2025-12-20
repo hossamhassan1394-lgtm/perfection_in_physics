@@ -102,7 +102,13 @@
         <p class="text-white/60 mb-4">
           Use this form to upload normal lecture or general exam sheets and sync them with Supabase.
         </p>
-        <app-excel-upload></app-excel-upload>
+        <div class="flex items-center gap-3 mb-4">
+          <app-excel-upload></app-excel-upload>
+          <button (click)="downloadLog()" type="button"
+            class="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition">
+            Download Error Log
+          </button>
+        </div>
       </div>
 
       <!-- Students Table -->
