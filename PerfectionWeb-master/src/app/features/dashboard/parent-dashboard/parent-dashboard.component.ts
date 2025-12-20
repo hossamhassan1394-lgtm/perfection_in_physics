@@ -98,7 +98,7 @@ export class ParentDashboardComponent implements OnInit {
   selectedStudent = signal<Student | null>(null);
   selectedStudentId = signal<string | null>(null);
   sessions = signal<Session[]>([]);
-  
+
   // Settings modal / change password
   showSettings = signal<boolean>(false);
   currentPassword = signal('');
@@ -138,7 +138,7 @@ export class ParentDashboardComponent implements OnInit {
     this.studentService.getStudentsForParent().subscribe({
       next: (students) => {
         console.log('📚 Raw students from backend:', students);
-        
+
         // Deduplicate students by ID
         const uniqueStudents = students.reduce((acc: Student[], current: Student) => {
           const existing = acc.find(s => s.id === current.id);
@@ -149,11 +149,11 @@ export class ParentDashboardComponent implements OnInit {
           }
           return acc;
         }, []);
-        
+
         console.log('✅ Unique students after deduplication:', uniqueStudents);
-        
+
         this.students.set(uniqueStudents);
-        
+
         if (uniqueStudents.length > 0) {
           const first = uniqueStudents[0];
           this.selectedStudent.set(first);
@@ -181,24 +181,24 @@ export class ParentDashboardComponent implements OnInit {
     this.studentService.getSessionsForStudent(studentId).subscribe({
       next: (sessions) => {
         console.log('📚 Raw sessions from backend:', sessions);
-        
+
         this.sessions.set(sessions as Session[]);
-        
+
         // Calculate session statistics
         const total = sessions.length;
         const attended = sessions.filter(s => s.attendance === 'attended').length;
         const missed = sessions.filter(s => s.attendance === 'missed').length;
-        
+
         this.sessionCount.set(total);
         this.attendedCount.set(attended);
         this.missedCount.set(missed);
-        
+
         // Debug: Check for general exams
-        const generalExams = sessions.filter((s: any) => 
+        const generalExams = sessions.filter((s: any) =>
           s.is_general_exam === true || s.isGeneralExam === true
         );
         console.log('🏆 General exams found:', generalExams);
-        
+
         // Log each session's is_general_exam status
         sessions.forEach((s: any, index: number) => {
           console.log(`Session ${index + 1}:`, {
@@ -234,6 +234,38 @@ export class ParentDashboardComponent implements OnInit {
     if (!student) return 0;
     const { paid, total } = student.payments;
     return paid;
+  }
+
+  getAttendancePercentage(): number {
+    const attended = this.attendedCount();
+    const total = this.sessionCount();
+    if (total === 0) return 0;
+    return Math.round((attended / total) * 100);
+  }
+
+  getTotalPayment(): string {
+    const sessions = this.sessions();
+    const total = sessions.reduce((sum, session) => sum + (session.payment || 0), 0);
+    return total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  getQuizPerformance(): number {
+    const sessions = this.sessions();
+    if (sessions.length === 0) return 0;
+
+    const totalCorrect = sessions.reduce((sum, session) => sum + (session.quizCorrect || 0), 0);
+    const totalQuestions = sessions.reduce((sum, session) => sum + (session.adminQuizMark || session.quizTotal || 0), 0);
+
+    if (totalQuestions === 0) return 0;
+    return Math.round((totalCorrect / totalQuestions) * 100);
+  }
+
+  getQuizDetails(): { correct: number; total: number } {
+    const sessions = this.sessions();
+    const correct = sessions.reduce((sum, session) => sum + (session.quizCorrect || 0), 0);
+    const total = sessions.reduce((sum, session) => sum + (session.adminQuizMark || session.quizTotal || 0), 0);
+
+    return { correct, total };
   }
 
   scrollSessions(direction: 'left' | 'right'): void {
@@ -330,14 +362,14 @@ export class ParentDashboardComponent implements OnInit {
   hasShamelData(): boolean {
     const sessions = this.sessions();
     console.log('Checking for Shamel data in sessions:', sessions);
-    
+
     const exam = sessions.find(s => {
       const isGeneralExam = (s as any).is_general_exam === true || (s as any).isGeneralExam === true;
       const isAttended = s.attendance === 'attended';
       console.log(`Session ${s.id}: is_general_exam=${isGeneralExam}, attendance=${s.attendance}`);
       return isGeneralExam && isAttended;
     });
-    
+
     console.log('Found general exam:', exam);
     return !!exam;
   }
@@ -354,9 +386,9 @@ export class ParentDashboardComponent implements OnInit {
       const total = exam.adminQuizMark || exam.quizTotal || 60;
       const score = exam.quizCorrect || 0;
       console.log('Shamel grade:', { score, total, label: exam.name });
-      return { 
-        score, 
-        total, 
+      return {
+        score,
+        total,
         label: exam.name || exam.lectureName || 'General Exam'
       };
     }

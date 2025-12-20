@@ -158,7 +158,7 @@ def format_start_time_arabic(value):
         try:
             s = str(value)
             return s if s.strip() else 'No start time'
-        except:
+        except Exception:
             return 'No start time'
 
 def parse_general_exam_sheet(file_path):
@@ -468,6 +468,13 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                 student_name = record.get('name', '').strip() or 'Unknown'
                 parent_no_raw = record.get('parent_no', '') or ''
                 parent_no = normalize_phone(parent_no_raw) or ''
+
+                # New schema requires parent_no and student_name to be present
+                if not parent_no:
+                    msg = f"Missing or invalid parent_no for student '{student_name}' (raw='{parent_no_raw}')"
+                    logger.warning(msg)
+                    errors.append(msg)
+                    continue
                 
                 # Prepare data for database
                 db_data = {
@@ -588,7 +595,7 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
 def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'ok', 'message': 'Flask backend is running'}), 200
-
+        
 @app.route('/api/upload-excel', methods=['POST'])
 def upload_excel():
     """
@@ -598,7 +605,7 @@ def upload_excel():
     - session_number: 1-8
     - quiz_mark: number (for general exam)
     - finish_time: datetime string
-    - group: cam1, maimi, cam2, west, station1, station2, station3
+    - group: cam1, maimi, cam2, west, station1, station2, station3, online
     - is_general_exam: true/false
     - lecture_name: string (for normal lectures)
     - exam_name: string (for general exams)
@@ -626,13 +633,12 @@ def upload_excel():
         is_general_exam = request.form.get('is_general_exam', 'false').lower() == 'true'
         lecture_name = request.form.get('lecture_name', '').strip()
         # Optional: allow passing a lecture unique key which maps to a lecture_name
-        # If `lecture_name` is missing, we will try to resolve it via `lecture_key` lookup
         lecture_key = request.form.get('lecture_key', '').strip()
         exam_name = request.form.get('exam_name', '').strip()
         has_exam_grade = request.form.get('has_exam_grade', 'true').lower() == 'true'
         has_payment = request.form.get('has_payment', 'true').lower() == 'true'
         has_time = request.form.get('has_time', 'true').lower() == 'true'
-        
+
         # Validate session number
         try:
             session_number = int(session_number)
