@@ -262,7 +262,7 @@ def parse_general_exam_sheet(file_path):
             raise ValueError(f"Required columns not found in general exam sheet. Found: {list(df.columns)}")
         
         records = []
-        for _, row in df.iterrows():
+        for idx, row in df.iterrows():
             # Skip empty rows
             if pd.isna(row[id_col]) or str(row[id_col]).strip() == '':
                 continue
@@ -276,12 +276,23 @@ def parse_general_exam_sheet(file_path):
                     # Try to convert to int, but handle if it's already a string
                     try:
                         parent_no_str = str(int(float(parent_no_val)))
-                    except:
+                    except Exception:
                         parent_no_str = str(parent_no_val).strip()
                 
+                student_name = str(row[name_col]).strip() if not pd.isna(row[name_col]) else ''
+                student_id = str(row[id_col]).strip()
+                
+                # Validate required fields
+                if not parent_no_str:
+                    logger.warning("Row %d: Missing or empty parent_no for student '%s' (id='%s')", idx+1, student_name, student_id)
+                    continue
+                if not student_name:
+                    logger.warning("Row %d: Missing or empty student name for id='%s'", idx+1, student_id)
+                    continue
+                
                 record = {
-                    'id': str(row[id_col]).strip(),
-                    'name': str(row[name_col]).strip() if not pd.isna(row[name_col]) else '',
+                    'id': student_id,
+                    'name': student_name,
                     'parent_no': parent_no_str,
                     'attendance': 1 if shamel_a_col and not pd.isna(row[shamel_a_col]) and (row[shamel_a_col] == 1 or str(row[shamel_a_col]).strip() == '1') else 0,
                     'payment': 1 if shamel_p_col and not pd.isna(row[shamel_p_col]) and (row[shamel_p_col] == 1 or str(row[shamel_p_col]).strip() == '1') else 0,
@@ -290,9 +301,10 @@ def parse_general_exam_sheet(file_path):
                 records.append(record)
             except Exception as e:
                 # Skip rows with errors but continue processing
-                logger.warning(f"Error processing row {row.get(id_col, 'unknown')}: {str(e)}")
+                logger.warning("Error processing row %d (id='%s'): %s", idx+1, row.get(id_col, 'unknown'), str(e))
                 continue
         
+        logger.info("Parsed %d valid records from general exam sheet", len(records))
         return records
     except Exception as e:
         raise Exception(f"Error parsing general exam sheet: {str(e)}")
@@ -377,7 +389,7 @@ def parse_normal_lecture_sheet(file_path):
                     try:
                         # Try to parse as number first
                         parent_no_str = str(int(float(parent_no_val)))
-                    except:
+                    except Exception:
                         parent_no_str = str(parent_no_val).strip()
                 
                 # Handle student_no conversion
@@ -385,7 +397,7 @@ def parse_normal_lecture_sheet(file_path):
                 if student_no_col and not pd.isna(row[student_no_col]) and str(row[student_no_col]).strip():
                     try:
                         student_no_str = str(int(float(row[student_no_col])))
-                    except:
+                    except Exception:
                         student_no_str = str(row[student_no_col]).strip()
                 
                 # Parse pokin
@@ -393,7 +405,7 @@ def parse_normal_lecture_sheet(file_path):
                 if pokin_col and not pd.isna(row[pokin_col]):
                     try:
                         pokin_val = float(row[pokin_col])
-                    except:
+                    except Exception:
                         pass
                 
                 # Parse payment
@@ -401,7 +413,7 @@ def parse_normal_lecture_sheet(file_path):
                 if p_col and not pd.isna(row[p_col]):
                     try:
                         payment_val = float(row[p_col])
-                    except:
+                    except Exception:
                         pass
                 
                 # Parse quiz mark
@@ -409,7 +421,7 @@ def parse_normal_lecture_sheet(file_path):
                 if q_col and not pd.isna(row[q_col]):
                     try:
                         quiz_val = float(row[q_col])
-                    except:
+                    except Exception:
                         pass
                 
                 record = {
@@ -486,6 +498,31 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
         updated_count = 0
         errors = []
         
+        # Collect unique parent_no values from all records to pre-fetch existing records
+        unique_parent_nos = set()
+        for rec in records:
+            parent_no_raw = rec.get('parent_no', '') or ''
+            parent_no = normalize_phone(parent_no_raw) or ''
+            if parent_no:
+                unique_parent_nos.add(parent_no)
+        
+        # Pre-fetch all existing records for these parent numbers (cache lookup)
+        existing_by_parent = {}
+        if unique_parent_nos:
+            try:
+                for parent_no in unique_parent_nos:
+                    existing = supabase.table('session_records').select('student_id', 'student_name').eq('parent_no', parent_no).execute()
+                    if getattr(existing, 'data', None):
+                        existing_by_parent[parent_no] = existing.data
+                    else:
+                        existing_by_parent[parent_no] = []
+            except Exception as e:
+                logger.warning("Error pre-fetching existing records: %s", str(e))
+        
+        # Batch lists for insert and update operations
+        inserts_to_do = []
+        updates_to_do = []  # (old_id, update_data)
+        
         for record in records:
             try:
                 student_id = record.get('id', '').strip()
@@ -533,129 +570,171 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                         db_data['finish_time'] = normalized_finish if normalized_finish else finish_time
                     except Exception:
                         db_data['finish_time'] = finish_time
-
-                if record.get('start_time'):
-                    # Normalize start_time from the parsed record (handles Arabic AM/PM, etc.)
-                    try:
-                        normalized_start = normalize_timestamp(record.get('start_time'))
-                        db_data['start_time'] = normalized_start if normalized_start else record.get('start_time')
-                    except Exception:
-                        db_data['start_time'] = record.get('start_time')
-                
-                if record.get('homework_status') is not None:
-                    db_data['homework_status'] = int(record.get('homework_status'))
-                
-                if record.get('pokin'):
-                    db_data['pokin'] = float(record.get('pokin'))
-                
-                if record.get('student_no'):
-                    db_data['student_no'] = str(record.get('student_no')).strip()
-                
-                # Before inserting, try to find an existing record by the new uniqueness key
-                try:
-                    # Fetch any records with the same parent_no and then perform a normalized, case-insensitive
-                    # name comparison locally so we match common name variations. This avoids relying on exact
-                    # string equality from different uploads.
-                    existing = supabase.table('session_records').select('student_id', 'student_name').eq('parent_no', parent_no).limit(200).execute()
-                    existing_error = getattr(existing, 'error', None)
-                    if existing_error:
-                        logger.warning("Error while searching existing records by parent_no: %s", str(existing_error))
-
-                    found_old = None
-                    matched_old_ids = []
-                    try:
-                        incoming_norm = normalize_name(student_name)
-                    except Exception:
-                        incoming_norm = student_name.strip().lower()
-
-                    if existing and getattr(existing, 'data', None):
-                        for r in existing.data:
-                            stored_name = (r.get('student_name') or '').strip()
-                            try:
-                                stored_norm = normalize_name(stored_name)
-                            except Exception:
-                                stored_norm = stored_name.lower()
-                            if stored_norm == incoming_norm:
-                                sid = r.get('student_id')
-                                if sid:
-                                    matched_old_ids.append(sid)
-                        if matched_old_ids:
-                            # pick the first as representative
-                            found_old = matched_old_ids[0]
-
-                    if matched_old_ids:
-                        # If we found matches, update ALL rows for each matched old id so this person keeps one id
-                        for found in matched_old_ids:
-                            if found != db_data['student_id']:
-                                try:
-                                    update_data = dict(db_data)
-                                    update_data['student_id'] = db_data['student_id']
-                                    upd = supabase.table('session_records').update(update_data).eq('student_id', found).execute()
-                                    upd_err = getattr(upd, 'error', None)
-                                    if not upd_err:
-                                        updated_count += 1
-                                        logger.info("Updated all records for existing ID %s -> %s for %s", found, db_data['student_id'], student_name)
-                                    else:
-                                        ue = upd_err.get('message') if isinstance(upd_err, dict) else str(upd_err)
-                                        logger.warning("Failed to update existing records %s: %s", found, ue)
-                                except Exception as ex_upd:
-                                    logger.exception("Exception updating existing records %s: %s", found, str(ex_upd))
-
-                    # If no existing matching record, try to insert
-                    insert_res = supabase.table('session_records').insert(db_data).execute()
-                    insert_error = getattr(insert_res, 'error', None)
-                    if not insert_error:
-                        updated_count += 1
-                        logger.info(f"Inserted record for {db_data.get('student_id')} (session {session_number}, group {group})")
-                    else:
-                        error_msg = insert_error.get('message') if isinstance(insert_error, dict) else str(insert_error)
-                        logger.warning(f"Insert returned error for {db_data.get('student_id')}: {error_msg}")
-                        # If duplicate key, attempt best-effort updates
-                        if '23505' in str(error_msg) or 'duplicate' in str(error_msg).lower() or 'unique' in str(error_msg).lower():
-                            try:
-                                # First try to update by student_id
-                                update_res = supabase.table('session_records').update(db_data).eq('student_id', db_data.get('student_id')).eq('session_number', session_number).eq('is_general_exam', is_general_exam).execute()
-                                update_error = getattr(update_res, 'error', None)
-                                if not update_error:
-                                    updated_count += 1
-                                    logger.info(f"Updated duplicate record for {db_data.get('student_id')}")
-                                else:
-                                    ue_msg = update_error.get('message') if isinstance(update_error, dict) else str(update_error)
-                                    errors.append(f"Row {db_data.get('student_id')}: {ue_msg}")
-                                    logger.error(f"Update failed for {db_data.get('student_id')}: {ue_msg}")
-                                    # Try updating by uniqueness (student_name + session_number + parent_no)
-                                    try:
-                                        # fallback: search by name + parent_no across sessions
-                                        existing2 = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('parent_no', parent_no).limit(1).execute()
-                                        if existing2 and getattr(existing2, 'data', None) and len(existing2.data) > 0:
-                                            old_id = existing2.data[0].get('student_id')
-                                            if old_id and old_id != db_data.get('student_id'):
-                                                update_data = dict(db_data)
-                                                update_data['student_id'] = db_data.get('student_id')
-                                                update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('parent_no', parent_no).eq('is_general_exam', is_general_exam).execute()
-                                                update_name_error = getattr(update_by_name, 'error', None)
-                                                if not update_name_error:
-                                                    updated_count += 1
-                                                    logger.info(f"Updated student ID from '{old_id}' to '{db_data.get('student_id')}' for '{student_name}'")
-                                                else:
-                                                    name_err = update_name_error.get('message') if isinstance(update_name_error, dict) else str(update_name_error)
-                                                    logger.error(f"Name-based update failed for {student_name}: {name_err}")
-                                    except Exception as name_err:
-                                        logger.warning(f"Name-based lookup/update exception for {student_name}: {str(name_err)}")
-                            except Exception as update_err:
-                                errors.append(f"Row {db_data.get('student_id')}: {str(update_err)}")
-                                logger.exception(f"Update exception for {db_data.get('student_id')}: {str(update_err)}")
-                        else:
-                            errors.append(f"Row {db_data.get('student_id')}: {error_msg}")
-                except Exception as e:
-                    # Exception from Supabase client call
-                    err_text = str(e)
-                    errors.append(f"Row {db_data.get('student_id')}: {err_text}")
-                    logger.exception(f"Insert exception for {db_data.get('student_id')}: {err_text}")
-                    
             except Exception as e:
                 errors.append(str(e))
+                continue
+            
+            # Add remaining optional fields
+            if record.get('start_time'):
+                # Normalize start_time from the parsed record
+                try:
+                    normalized_start = normalize_timestamp(record.get('start_time'))
+                    db_data['start_time'] = normalized_start if normalized_start else record.get('start_time')
+                except Exception:
+                    db_data['start_time'] = record.get('start_time')
+            
+            if record.get('homework_status') is not None:
+                db_data['homework_status'] = int(record.get('homework_status'))
+            
+            if record.get('pokin'):
+                db_data['pokin'] = float(record.get('pokin'))
+            
+            if record.get('student_no'):
+                db_data['student_no'] = str(record.get('student_no')).strip()
+            
+            # For general exams: ALWAYS UPDATE if exists, otherwise INSERT
+        # For normal lectures: Check for duplicates by name/parent_no to avoid duplication
+        if is_general_exam:
+            # General exam: queue for UPDATE (will update existing record or insert new one)
+            updates_to_do.append((student_id, parent_no, group, session_number, dict(db_data)))
+        else:
+            # Normal lecture: check for existing records using pre-fetched cache
+            try:
+                matched_old_ids = []
+                incoming_norm = normalize_name(student_name)
+                existing_records = existing_by_parent.get(parent_no, [])
+                
+                for r in existing_records:
+                    stored_name = (r.get('student_name') or '').strip()
+                    stored_norm = normalize_name(stored_name)
+                    if stored_norm == incoming_norm:
+                        sid = r.get('student_id')
+                        if sid:
+                            matched_old_ids.append(sid)
+                
+                # Queue updates for matched old IDs and insert for new records
+                if matched_old_ids:
+                    for old_id in matched_old_ids:
+                        if old_id != db_data['student_id']:
+                            updates_to_do.append((old_id, None, None, None, dict(db_data)))
+                else:
+                    inserts_to_do.append(db_data)
+            except Exception as e:
+                logger.warning("Error checking existing records for %s: %s", student_name, str(e))
+                # On error, queue for insert as fallback
+                inserts_to_do.append(db_data)
         
+        # Execute batch inserts
+        if inserts_to_do:
+            try:
+                logger.info("Attempting batch insert of %d records", len(inserts_to_do))
+                insert_res = supabase.table('session_records').insert(inserts_to_do).execute()
+                insert_error = getattr(insert_res, 'error', None)
+                if not insert_error:
+                    updated_count += len(inserts_to_do)
+                    logger.info("Inserted %d records", len(inserts_to_do))
+                else:
+                    err_msg = insert_error.get('message') if isinstance(insert_error, dict) else str(insert_error)
+                    logger.warning("Batch insert error: %s - Falling back to one-by-one", err_msg)
+                    # Fallback: try inserting one-by-one
+                    for item in inserts_to_do:
+                        try:
+                            logger.info("Inserting one-by-one: %s", item.get('student_id'))
+                            res = supabase.table('session_records').insert(item).execute()
+                            if not getattr(res, 'error', None):
+                                updated_count += 1
+                                logger.info("Successfully inserted one: %s", item.get('student_id'))
+                            else:
+                                err = getattr(res, 'error', None)
+                                logger.error("Insert failed for %s: %s", item.get('student_id'), str(err))
+                                errors.append("Insert failed for %s: %s" % (item.get('student_id'), str(err)))
+                        except Exception as e:
+                            logger.exception("Insert exception for %s: %s", item.get('student_id'), str(e))
+                            errors.append("Insert exception for %s: %s" % (item.get('student_id'), str(e)))
+            except Exception as e:
+                logger.exception("Batch insert exception: %s", str(e))
+                for item in inserts_to_do:
+                    errors.append("Batch exception for %s: %s" % (item.get('student_id'), str(e)))
+        
+        # Execute batch updates
+        if updates_to_do:
+            for update_item in updates_to_do:
+                # update_item can be either (student_id, parent_no, group, session_number, update_data) for general exam
+                # or (student_id, None, None, None, update_data) for normal lecture update
+                if len(update_item) == 5:
+                    std_id, std_parent, std_group, std_session, update_data = update_item
+                    std_name = update_data.get('student_name', '')
+                    
+                    if std_parent and std_session and std_name:
+                        # General exam: update by unique constraint (student_name, session_number, parent_no)
+                        try:
+                            logger.info("Attempting general exam update for %s (session %d, parent %s)", std_id, std_session, std_parent)
+                            upd = supabase.table('session_records').update(update_data).eq('student_name', std_name).eq('parent_no', std_parent).eq('session_number', std_session).execute()
+                            upd_err = getattr(upd, 'error', None)
+                            upd_count = len(getattr(upd, 'data', []))
+                            
+                            if not upd_err and upd_count > 0:
+                                updated_count += upd_count
+                                logger.info("Updated %d general exam record(s) for %s", upd_count, std_id)
+                            else:
+                                # No rows matched - insert as new
+                                logger.info("No existing record found for %s (session %d), attempting insert", std_id, std_session)
+                                try:
+                                    ins = supabase.table('session_records').insert(update_data).execute()
+                                    ins_err = getattr(ins, 'error', None)
+                                    if not ins_err:
+                                        updated_count += 1
+                                        logger.info("Inserted new general exam for %s", std_id)
+                                    else:
+                                        ie = ins_err.get('message') if isinstance(ins_err, dict) else str(ins_err)
+                                        logger.error("Insert failed for %s: %s", std_id, ie)
+                                        errors.append("Insert failed for %s: %s" % (std_id, ie))
+                                except Exception as e:
+                                    logger.exception("Insert exception for %s: %s", std_id, str(e))
+                                    errors.append("Insert exception for %s: %s" % (std_id, str(e)))
+                        except Exception as e:
+                            logger.exception("Update exception for %s: %s", std_id, str(e))
+                            errors.append("Update exception for %s: %s" % (std_id, str(e)))
+                    else:
+                        # Normal lecture update (by student_id)
+                        if std_id:
+                            update_data_copy = dict(update_data)
+                            try:
+                                upd = supabase.table('session_records').update(update_data_copy).eq('student_id', std_id).execute()
+                                upd_err = getattr(upd, 'error', None)
+                                upd_count = len(getattr(upd, 'data', []))
+                                
+                                if not upd_err:
+                                    updated_count += upd_count
+                                    logger.info("Updated %d record(s) for %s", upd_count, std_id)
+                                else:
+                                    ue = upd_err.get('message') if isinstance(upd_err, dict) else str(upd_err)
+                                    logger.warning("Update failed for %s: %s", std_id, ue)
+                                    errors.append("Update failed for %s: %s" % (std_id, ue))
+                            except Exception as e:
+                                logger.exception("Update exception for %s: %s", std_id, str(e))
+                                errors.append("Update exception for %s: %s" % (std_id, str(e)))
+                else:
+                    # Fallback for old format (shouldn't happen)
+                    std_id, update_data = update_item[0], update_item[1]
+                    if std_id != update_data.get('student_id'):
+                        try:
+                            upd = supabase.table('session_records').update(update_data).eq('student_id', std_id).execute()
+                            upd_err = getattr(upd, 'error', None)
+                            upd_count = len(getattr(upd, 'data', []))
+                            
+                            if not upd_err:
+                                updated_count += upd_count
+                                logger.info("Updated %d record(s) for %s", upd_count, std_id)
+                            else:
+                                ue = upd_err.get('message') if isinstance(upd_err, dict) else str(upd_err)
+                                logger.warning("Update failed for %s: %s", std_id, ue)
+                                errors.append("Update failed for %s: %s" % (std_id, ue))
+                        except Exception as e:
+                            logger.exception("Update exception for %s: %s", std_id, str(e))
+                            errors.append("Update exception for %s: %s" % (std_id, str(e)))
+        
+        logger.info("Upload summary: %d/%d records processed, %d errors", updated_count, len(records), len(errors))
         logger.info(f"Upload summary: {updated_count}/{len(records)} records uploaded, {len(errors)} errors")
         return updated_count, errors
     except Exception as e:
@@ -921,6 +1000,8 @@ def get_parent_sessions():
                 'name': r.get('lecture_name') or r.get('exam_name') or r.get('student_name') or f"Session {r.get('session_number')}",
                 'lectureName': r.get('lecture_name') or r.get('exam_name'),
                 'date': r.get('finish_time') or '',
+                'is_general_exam': r.get('is_general_exam', False),
+                'isGeneralExam': r.get('is_general_exam', False),
                 'startTime': formatted_start,
                 'start_time': formatted_start,
                 'attendance': 'attended' if int(r.get('attendance') or 0) == 1 else 'missed',
