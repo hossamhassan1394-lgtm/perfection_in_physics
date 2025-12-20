@@ -27,6 +27,7 @@ import {
 } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { StudentService, Student } from '../../../core/services/student.service';
+import { NoDataComponent } from '../../../shared/components/no-data/no-data.component';
 
 export interface Session {
   id: number;
@@ -51,8 +52,8 @@ export interface Session {
 interface UniqueStudent {
   parentNumber: string;
   name: string;
-  combinedId: string; // parentNumber + name for uniqueness
-  ids: string[]; // All IDs associated with this student
+  combinedId: string;
+  ids: string[];
   grade: string;
   sessions: Session[];
 }
@@ -63,7 +64,8 @@ interface UniqueStudent {
   imports: [
     CommonModule,
     FormsModule,
-    LucideAngularModule
+    LucideAngularModule,
+    NoDataComponent
   ],
   templateUrl: './parent-dashboard.component.html',
   styleUrls: ['./parent-dashboard.component.scss']
@@ -102,11 +104,16 @@ export class ParentDashboardComponent implements OnInit {
   // View references
   @ViewChild('sessionCarousel') sessionCarousel!: ElementRef<HTMLDivElement>;
 
-  // Component state - now using unified students
+  // Component state - using unified students
   uniqueStudents = signal<UniqueStudent[]>([]);
   selectedStudent = signal<UniqueStudent | null>(null);
   selectedStudentCombinedId = signal<string | null>(null);
   sessions = signal<Session[]>([]);
+  
+  // Loading and error states
+  isLoadingStudents = signal(true);
+  isLoadingSessions = signal(false);
+  hasError = signal(false);
   
   // Settings modal / change password
   showSettings = signal<boolean>(false);
@@ -144,20 +151,20 @@ export class ParentDashboardComponent implements OnInit {
   }
 
   loadStudents(): void {
+    this.isLoadingStudents.set(true);
+    this.hasError.set(false);
+    
     this.studentService.getStudentsForParent().subscribe({
       next: (students) => {
         console.log('📚 Raw students from backend:', students);
         
-        // CRITICAL FIX: Backend now returns students already grouped by parent_no + name
-        // Each student has a stable ID (parent_no) and name
-        // We just need to convert them to our UniqueStudent format
-        
+        // Backend returns students already grouped by parent_no + name
         const uniqueStudentsList: UniqueStudent[] = students.map((student: Student) => {
           return {
-            parentNumber: student.id, // Backend returns parent_no as id
+            parentNumber: student.id,
             name: student.name,
             combinedId: `${student.id}_${student.name}`,
-            ids: [student.id], // Backend handles ID tracking internally
+            ids: [student.id],
             grade: student.grade,
             sessions: []
           };
@@ -166,16 +173,33 @@ export class ParentDashboardComponent implements OnInit {
         console.log('✅ Unique students loaded:', uniqueStudentsList);
         
         this.uniqueStudents.set(uniqueStudentsList);
+        this.isLoadingStudents.set(false);
         
         if (uniqueStudentsList.length > 0) {
           const first = uniqueStudentsList[0];
           this.selectedStudent.set(first);
           this.selectedStudentCombinedId.set(first.combinedId);
-          this.loadSessionsForStudent(first);
+          
+          // Add small delay to ensure DOM is ready
+          setTimeout(() => {
+            this.loadSessionsForStudent(first);
+          }, 100);
+        } else {
+          // No students found - clear everything
+          this.sessions.set([]);
+          this.sessionCount.set(0);
+          this.attendedCount.set(0);
+          this.missedCount.set(0);
         }
       },
       error: (error) => {
         console.error('Error loading students:', error);
+        this.isLoadingStudents.set(false);
+        this.hasError.set(true);
+        this.sessions.set([]);
+        this.sessionCount.set(0);
+        this.attendedCount.set(0);
+        this.missedCount.set(0);
       }
     });
   }
@@ -192,13 +216,14 @@ export class ParentDashboardComponent implements OnInit {
   loadSessionsForStudent(student: UniqueStudent): void {
     console.log(`📚 Loading sessions for ${student.name} (Parent: ${student.parentNumber})`);
     
-    // CRITICAL FIX: Backend now handles grouping by parent_no + name internally
-    // We just need to request sessions by parent number (stored in ids[0])
+    this.isLoadingSessions.set(true);
+    
     this.studentService.getSessionsForStudent(student.ids[0]).subscribe({
       next: (sessions) => {
         console.log(`📚 Loaded ${sessions.length} sessions for ${student.name}`);
         
         this.sessions.set(sessions as Session[]);
+        this.isLoadingSessions.set(false);
         
         // Calculate session statistics
         const total = sessions.length;
@@ -234,11 +259,33 @@ export class ParentDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading sessions:', err);
+        this.isLoadingSessions.set(false);
         this.sessionCount.set(0);
         this.attendedCount.set(0);
         this.missedCount.set(0);
+        this.sessions.set([]);
       }
     });
+  }
+
+  // Helper methods for data state checking
+  hasStudentData(): boolean {
+    return this.uniqueStudents().length > 0;
+  }
+
+  hasSessionData(): boolean {
+    return this.sessions().length > 0;
+  }
+
+  refreshData(): void {
+    console.log('🔄 Refreshing data...');
+    if (this.selectedStudent()) {
+      console.log('🔄 Reloading sessions for current student');
+      this.loadSessionsForStudent(this.selectedStudent()!);
+    } else {
+      console.log('🔄 Reloading all students');
+      this.loadStudents();
+    }
   }
 
   // Calculate attendance percentage
@@ -254,7 +301,7 @@ export class ParentDashboardComponent implements OnInit {
     return this.sessions().reduce((sum, session) => sum + (session.payment || 0), 0);
   }
 
-  // Calculate quiz performance percentage - FIXED
+  // Calculate quiz performance percentage
   getQuizPerformance(): number {
     const sessions = this.sessions();
     let totalCorrect = 0;
@@ -263,7 +310,6 @@ export class ParentDashboardComponent implements OnInit {
     sessions.forEach(session => {
       if (session.attendance === 'attended') {
         totalCorrect += session.quizCorrect || 0;
-        // CRITICAL FIX: Use adminQuizMark if available, otherwise quizTotal
         const totalForSession = session.adminQuizMark || session.quizTotal || 0;
         totalQuestions += totalForSession;
       }
@@ -273,7 +319,7 @@ export class ParentDashboardComponent implements OnInit {
     return Math.round((totalCorrect / totalQuestions) * 100);
   }
 
-  // Get quiz details for display - FIXED
+  // Get quiz details for display
   getQuizDetails(): { correct: number; total: number } {
     const sessions = this.sessions();
     let totalCorrect = 0;
@@ -282,7 +328,6 @@ export class ParentDashboardComponent implements OnInit {
     sessions.forEach(session => {
       if (session.attendance === 'attended') {
         totalCorrect += session.quizCorrect || 0;
-        // CRITICAL FIX: Use adminQuizMark if available, otherwise quizTotal
         const totalForSession = session.adminQuizMark || session.quizTotal || 0;
         totalQuestions += totalForSession;
       }
@@ -380,7 +425,6 @@ export class ParentDashboardComponent implements OnInit {
   isGeneralExamSession(session: Session): boolean {
     const sessionAny = session as any;
     
-    // Check if marked as general exam
     const isMarkedAsGeneralExam = (
       sessionAny.is_general_exam === true || 
       sessionAny.is_general_exam === 'true' ||
@@ -392,7 +436,6 @@ export class ParentDashboardComponent implements OnInit {
       sessionAny.generalExam === true
     );
     
-    // Fallback: Check if name contains "shamel" or "exam" keywords
     const nameStr = (session.name || session.lectureName || '').toLowerCase();
     const hasExamKeyword = 
       nameStr.includes('shamel') || 
@@ -403,16 +446,14 @@ export class ParentDashboardComponent implements OnInit {
     return isMarkedAsGeneralExam || hasExamKeyword;
   }
 
-  // Check if student has attended general exam data - FIXED
+  // Check if student has attended general exam data
   hasShamelData(): boolean {
     const sessions = this.sessions();
     console.log('🔍 Checking for Shamel data. Total sessions:', sessions.length);
     
-    // Must be both a general exam AND attended
     const exam = sessions.find(s => {
       const sessionAny = s as any;
       
-      // Check if marked as general exam
       const isMarkedAsGeneralExam = 
         sessionAny.is_general_exam === true || 
         sessionAny.is_general_exam === 'true' ||
@@ -423,7 +464,6 @@ export class ParentDashboardComponent implements OnInit {
         sessionAny.general_exam === true ||
         sessionAny.generalExam === true;
       
-      // Fallback: Check if name contains "shamel" or "exam" keywords
       const nameStr = (s.name || s.lectureName || '').toLowerCase();
       const hasExamKeyword = 
         nameStr.includes('shamel') || 
@@ -444,7 +484,6 @@ export class ParentDashboardComponent implements OnInit {
         'QUALIFIES': isGeneralExam && isAttended
       });
       
-      // CRITICAL: Only return true if it's BOTH a general exam AND attended
       return isGeneralExam && isAttended;
     });
     
@@ -463,7 +502,6 @@ export class ParentDashboardComponent implements OnInit {
     const exam = sessions.find(s => {
       const sessionAny = s as any;
       
-      // Check if marked as general exam
       const isMarkedAsGeneralExam = 
         sessionAny.is_general_exam === true || 
         sessionAny.is_general_exam === 'true' ||
@@ -474,7 +512,6 @@ export class ParentDashboardComponent implements OnInit {
         sessionAny.general_exam === true ||
         sessionAny.generalExam === true;
       
-      // Fallback: Check if name contains "shamel" or "exam" keywords
       const nameStr = (s.name || s.lectureName || '').toLowerCase();
       const hasExamKeyword = 
         nameStr.includes('shamel') || 
@@ -484,7 +521,6 @@ export class ParentDashboardComponent implements OnInit {
       
       const isGeneralExam = isMarkedAsGeneralExam || hasExamKeyword;
       
-      // CRITICAL: Only return exam if it's BOTH general exam AND attended
       return isGeneralExam && s.attendance === 'attended';
     });
 

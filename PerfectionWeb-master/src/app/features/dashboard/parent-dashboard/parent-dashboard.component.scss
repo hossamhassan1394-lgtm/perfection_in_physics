@@ -10,6 +10,19 @@ $muted-purple: #8B7FA8;
 $light-lavender: #F8F7FF;
 
 // ==========================================
+// RTL SUPPORT - Base Setup
+// ==========================================
+[dir='rtl'] {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir='ltr'] {
+  direction: ltr;
+  text-align: left;
+}
+
+// ==========================================
 // DASHBOARD CONTAINER
 // ==========================================
 .dashboard-container {
@@ -20,7 +33,7 @@ $light-lavender: #F8F7FF;
 }
 
 // ==========================================
-// TOP NAVIGATION
+// TOP NAVIGATION - RTL Fixed
 // ==========================================
 .top-nav {
   position: fixed;
@@ -28,7 +41,7 @@ $light-lavender: #F8F7FF;
   left: 0;
   right: 0;
   height: 80px;
-  background:linear-gradient(135deg, $light-lavender 100%, blue 0%);
+  background: linear-gradient(135deg, $light-lavender 100%, blue 0%);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   z-index: 1000;
 
@@ -40,6 +53,11 @@ $light-lavender: #F8F7FF;
     display: flex;
     align-items: center;
     justify-content: space-between;
+
+    // RTL: Reverse flex direction
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+    }
   }
 }
 
@@ -47,6 +65,11 @@ $light-lavender: #F8F7FF;
   display: flex;
   align-items: center;
   gap: 16px;
+
+  // RTL: Reverse brand layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .logo-circle {
     width: 44px;
@@ -72,6 +95,11 @@ $light-lavender: #F8F7FF;
       color: $deep-indigo;
       margin: 0;
       line-height: 1.2;
+
+      // RTL: Right align text
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
 
     .brand-subtitle {
@@ -79,6 +107,11 @@ $light-lavender: #F8F7FF;
       color: $muted-purple;
       margin: 0;
       line-height: 1.2;
+
+      // RTL: Right align text
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
   }
 }
@@ -87,6 +120,11 @@ $light-lavender: #F8F7FF;
   display: flex;
   align-items: center;
   gap: 16px;
+
+  // RTL: Reverse nav actions
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 }
 
 .user-info {
@@ -97,6 +135,11 @@ $light-lavender: #F8F7FF;
   background: white;
   border-radius: 28px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  // RTL: Reverse user info layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .status-dot {
     width: 10px;
@@ -113,6 +156,11 @@ $light-lavender: #F8F7FF;
       color: $deep-indigo;
       margin: 0;
       line-height: 1.3;
+
+      // RTL: Right align
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
 
     .user-grade {
@@ -120,6 +168,11 @@ $light-lavender: #F8F7FF;
       color: $muted-purple;
       margin: 0;
       line-height: 1.3;
+
+      // RTL: Right align
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
   }
 }
@@ -157,6 +210,11 @@ $light-lavender: #F8F7FF;
   padding: 0 20px;
   gap: 8px;
 
+  // RTL: Reverse button content
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
+
   span {
     font-size: 14px;
     font-weight: 500;
@@ -185,7 +243,7 @@ $light-lavender: #F8F7FF;
 }
 
 // ==========================================
-// STUDENT SELECTOR
+// STUDENT SELECTOR - RTL Fixed
 // ==========================================
 .student-selector-wrapper {
   margin-bottom: 32px;
@@ -201,6 +259,11 @@ $light-lavender: #F8F7FF;
   color: $muted-purple;
   margin-bottom: 12px;
   text-transform: uppercase;
+
+  // RTL: Reverse label layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .label-icon {
     width: 16px;
@@ -227,6 +290,12 @@ $light-lavender: #F8F7FF;
     appearance: none;
     transition: all 0.3s ease;
 
+    // RTL: Swap padding
+    [dir='rtl'] & {
+      padding: 0 24px 0 48px;
+      text-align: right;
+    }
+
     &:hover {
       border-color: rgba($deep-purple, 0.2);
       box-shadow: 0 4px 16px rgba($deep-purple, 0.12);
@@ -248,11 +317,17 @@ $light-lavender: #F8F7FF;
     height: 20px;
     color: $muted-purple;
     pointer-events: none;
+
+    // RTL: Move arrow to left
+    [dir='rtl'] & {
+      right: auto;
+      left: 20px;
+    }
   }
 }
 
 // ==========================================
-// HERO PROFILE CARD - MODERN GLASSMORPHISM
+// HERO PROFILE CARD - RTL Fixed
 // ==========================================
 .hero-card {
   background: linear-gradient(135deg, rgba(230, 224, 255, 0.95) 0%, rgba(255, 230, 240, 0.95) 100%);
@@ -286,6 +361,12 @@ $light-lavender: #F8F7FF;
     background: radial-gradient(circle, rgba(white, 0.4) 0%, transparent 60%);
     pointer-events: none;
     animation: shimmer 8s ease-in-out infinite;
+
+    // RTL: Mirror background position
+    [dir='rtl'] & {
+      right: auto;
+      left: -30%;
+    }
   }
 
   &::after {
@@ -297,6 +378,12 @@ $light-lavender: #F8F7FF;
     height: 60%;
     background: radial-gradient(circle, rgba($vibrant-coral, 0.15) 0%, transparent 70%);
     pointer-events: none;
+
+    // RTL: Mirror background position
+    [dir='rtl'] & {
+      left: auto;
+      right: -20%;
+    }
   }
 }
 
@@ -307,6 +394,11 @@ $light-lavender: #F8F7FF;
   align-items: center;
   position: relative;
   z-index: 1;
+
+  // RTL: Reverse grid layout
+  [dir='rtl'] & {
+    direction: rtl;
+  }
 }
 
 .hero-left {
@@ -316,6 +408,11 @@ $light-lavender: #F8F7FF;
     color: rgba($deep-indigo, 0.7);
     margin: 0 0 12px 0;
     letter-spacing: 0.5px;
+
+    // RTL: Right align
+    [dir='rtl'] & {
+      text-align: right;
+    }
   }
 
   .hero-name {
@@ -325,6 +422,11 @@ $light-lavender: #F8F7FF;
     margin: 0 0 24px 0;
     line-height: 1.1;
     letter-spacing: -1px;
+
+    // RTL: Right align
+    [dir='rtl'] & {
+      text-align: right;
+    }
   }
 
   .hero-meta {
@@ -333,6 +435,12 @@ $light-lavender: #F8F7FF;
     gap: 16px;
     margin-bottom: 24px;
     flex-wrap: wrap;
+
+    // RTL: Reverse meta layout
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+    }
 
     .student-id-badge {
       padding: 10px 20px;
@@ -366,6 +474,12 @@ $light-lavender: #F8F7FF;
     margin-bottom: 28px;
     flex-wrap: wrap;
 
+    // RTL: Reverse pills layout
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+    }
+
     .stat-pill {
       display: flex;
       align-items: center;
@@ -381,6 +495,11 @@ $light-lavender: #F8F7FF;
       border: 1px solid rgba(white, 0.5);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      // RTL: Reverse pill content
+      [dir='rtl'] & {
+        flex-direction: row-reverse;
+      }
 
       .pill-icon {
         width: 16px;
@@ -411,6 +530,11 @@ $light-lavender: #F8F7FF;
     border: 1px solid rgba($deep-purple, 0.2);
     box-shadow: 0 4px 12px rgba($deep-purple, 0.12);
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    // RTL: Reverse location pill
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+    }
 
     .location-icon {
       width: 18px;
@@ -531,6 +655,12 @@ $light-lavender: #F8F7FF;
         animation: smoothFloat1 6s ease-in-out infinite;
         color: $electric-blue;
 
+        // RTL: Mirror position
+        [dir='rtl'] & {
+          right: auto;
+          left: 8%;
+        }
+
         .illust-icon {
           color: white;
         }
@@ -551,6 +681,12 @@ $light-lavender: #F8F7FF;
         animation: smoothFloat2 7s ease-in-out infinite;
         color: $sunset-orange;
 
+        // RTL: Mirror position
+        [dir='rtl'] & {
+          left: auto;
+          right: 3%;
+        }
+
         .illust-icon {
           color: white;
         }
@@ -570,6 +706,12 @@ $light-lavender: #F8F7FF;
         background: linear-gradient(135deg, rgba($vibrant-coral, 0.98), rgba(lighten($vibrant-coral, 8%), 0.98));
         animation: smoothFloat3 8s ease-in-out infinite;
         color: $vibrant-coral;
+
+        // RTL: Mirror position
+        [dir='rtl'] & {
+          right: auto;
+          left: 6%;
+        }
 
         .illust-icon {
           color: white;
@@ -655,31 +797,8 @@ $light-lavender: #F8F7FF;
   }
 }
 
-// Gentle Pulse - Subtle breathing effect
-@keyframes gentlePulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.5;
-  }
-}
-
-@keyframes shimmer {
-  0%, 100% {
-    transform: translateX(0) translateY(0);
-    opacity: 0.8;
-  }
-  50% {
-    transform: translateX(15px) translateY(-15px);
-    opacity: 1;
-  }
-}
-
 // ==========================================
-// SHAMEL GRADE PANEL - SIMPLE SLIM CARD
+// SHAMEL GRADE PANEL - RTL Fixed
 // ==========================================
 .shamel-panel {
   background: linear-gradient(135deg, rgba(230, 224, 255, 0.6) 0%, rgba(255, 230, 240, 0.6) 100%);
@@ -721,6 +840,11 @@ $light-lavender: #F8F7FF;
     gap: 10px;
     margin-bottom: 16px;
 
+    // RTL: Reverse header layout
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+    }
+
     .header-icon {
       width: 22px;
       height: 22px;
@@ -734,6 +858,11 @@ $light-lavender: #F8F7FF;
       letter-spacing: 1.5px;
       color: $muted-purple;
       text-transform: uppercase;
+
+      // RTL: Right align
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
 
     .date-badge {
@@ -747,6 +876,12 @@ $light-lavender: #F8F7FF;
       border: 1px solid rgba($deep-purple, 0.15);
       transition: all 0.3s ease;
       margin-left: auto;
+
+      // RTL: Move to right
+      [dir='rtl'] & {
+        margin-left: 0;
+        margin-right: auto;
+      }
 
       &:hover {
         background: rgba(white, 1);
@@ -762,6 +897,11 @@ $light-lavender: #F8F7FF;
   justify-content: space-between;
   align-items: center;
   gap: 32px;
+
+  // RTL: Reverse layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .shamel-grade-display {
     .grade-numbers {
@@ -801,6 +941,11 @@ $light-lavender: #F8F7FF;
       color: $muted-purple;
       margin: 0;
       font-weight: 500;
+
+      // RTL: Right align
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
   }
 
@@ -879,13 +1024,20 @@ $light-lavender: #F8F7FF;
 }
 
 // ==========================================
-// STATISTICS CARDS ROW
+// STATISTICS CARDS ROW - RTL Fixed
+// ==========================================
+// ==========================================
+// STATISTICS CARDS ROW - RTL Fixed & Improved
 // ==========================================
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-bottom: 40px;
+  
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
@@ -896,10 +1048,24 @@ $light-lavender: #F8F7FF;
   box-shadow: 0 2px 12px rgba($deep-purple, 0.08);
   position: relative;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 
   &:hover {
     transform: translateY(-6px);
     box-shadow: 0 8px 24px rgba($deep-purple, 0.12);
+  }
+
+  // Header with icon and label
+  .stat-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    width: 100%;
   }
 
   .stat-icon-wrapper {
@@ -909,7 +1075,7 @@ $light-lavender: #F8F7FF;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 16px;
+    flex-shrink: 0;
 
     .stat-icon {
       width: 28px;
@@ -930,42 +1096,53 @@ $light-lavender: #F8F7FF;
     }
   }
 
-  .stat-content {
-    .stat-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 1.2px;
-      color: $muted-purple;
-      margin: 0 0 8px 0;
-      text-transform: uppercase;
-    }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    color: $muted-purple;
+    margin: 0;
+    text-transform: uppercase;
+    text-align: center;
+  }
 
-    .stat-value {
-      font-size: 44px;
-      font-weight: 700;
-      color: $deep-indigo;
-      margin: 0 0 4px 0;
-      line-height: 1;
+  // Main stats section
+  .stat-main {
+    margin-bottom: 20px;
+    width: 100%;
+  }
 
-      &.payment-value {
-        color: $sunset-orange;
-      }
-    }
+  .stat-value {
+    font-size: 48px;
+    font-weight: 700;
+    color: $deep-indigo;
+    margin: 0 0 8px 0;
+    line-height: 1;
+    text-align: center;
 
-    .stat-detail {
-      font-size: 14px;
-      color: $muted-purple;
-      margin: 0;
+    &.payment-value {
+      color: $sunset-orange;
     }
   }
 
-  .stat-visual {
-    position: absolute;
-    top: 50%;
-    right: 24px;
-    transform: translateY(-50%);
+  .stat-detail {
+    font-size: 14px;
+    color: $muted-purple;
+    margin: 0;
+    text-align: center;
+  }
 
-    .ring-svg {
+  // Centered visual section - ALWAYS IN CENTER
+  .stat-visual-center {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 0;
+    position: relative;
+
+    // Ring SVG for attendance
+    .ring-svg-center {
       width: 100px;
       height: 100px;
       transform: rotate(-90deg);
@@ -980,61 +1157,81 @@ $light-lavender: #F8F7FF;
         fill: none;
         stroke-width: 8;
         stroke-linecap: round;
-        stroke-dasharray: 251;
+        stroke-dasharray: 314;
         transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
 
         &.attendance-ring {
           stroke: $electric-blue;
         }
+      }
+    }
 
-        &.payment-ring {
-          stroke: $sunset-orange;
+    .ring-percentage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      font-weight: 700;
+      color: $electric-blue;
+    }
+
+    // Payment visual
+    &.payment-visual {
+      .payment-amount-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, rgba($sunset-orange, 0.1), rgba($sunset-orange, 0.05));
+        border-radius: 16px;
+        border: 2px solid rgba($sunset-orange, 0.2);
+
+        .currency-symbol {
+          font-size: 32px;
+          font-weight: 800;
+          color: $sunset-orange;
+        }
+
+        .amount-text {
+          font-size: 28px;
+          font-weight: 700;
+          color: $sunset-orange;
         }
       }
     }
 
-    .bar-chart {
+    // Bar chart for quiz
+    .bar-chart-center {
       display: flex;
-      gap: 6px;
+      gap: 12px;
       align-items: flex-end;
-      height: 60px;
+      height: 80px;
+      padding: 0 20px;
 
-      .bar {
-        width: 14px;
-        background: linear-gradient(180deg, $vibrant-coral, $deep-purple);
-        border-radius: 4px;
-        transition: height 0.8s ease-out;
-      }
-    }
-  }
+      .bar-wrapper {
+        display: flex;
+        align-items: flex-end;
+        height: 100%;
+        flex: 1;
 
-  .stat-progress-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 6px;
-    background: rgba($deep-indigo, 0.08);
-    border-radius: 0 0 20px 20px;
-    overflow: hidden;
-
-    .progress-fill {
-      height: 100%;
-      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-
-      &.attendance-fill {
-        background: $electric-blue;
-      }
-
-      &.payment-fill {
-        background: $sunset-orange;
+        .bar {
+          width: 100%;
+          min-height: 20%;
+          background: linear-gradient(180deg, $vibrant-coral, $deep-purple);
+          border-radius: 6px 6px 0 0;
+          transition: height 0.8s ease-out;
+        }
       }
     }
   }
 }
 
+ 
+   
 // ==========================================
-// SESSION HISTORY SECTION
+// SESSION HISTORY SECTION - RTL Fixed
 // ==========================================
 .session-section {
   margin-bottom: 48px;
@@ -1045,12 +1242,22 @@ $light-lavender: #F8F7FF;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 32px;
+
+  // RTL: Reverse header layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 }
 
 .section-title-group {
   display: flex;
   align-items: center;
   gap: 16px;
+
+  // RTL: Reverse title group
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .title-icon {
     width: 32px;
@@ -1064,12 +1271,22 @@ $light-lavender: #F8F7FF;
     color: $deep-indigo;
     margin: 0;
     line-height: 1.2;
+
+    // RTL: Right align
+    [dir='rtl'] & {
+      text-align: right;
+    }
   }
 
   .section-subtitle {
     font-size: 15px;
     color: $muted-purple;
     margin: 4px 0 0 0;
+
+    // RTL: Right align
+    [dir='rtl'] & {
+      text-align: right;
+    }
   }
 }
 
@@ -1088,6 +1305,11 @@ $light-lavender: #F8F7FF;
   color: $deep-indigo;
   transition: all 0.3s ease;
 
+  // RTL: Reverse button content
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
+
   .btn-icon {
     width: 18px;
     height: 18px;
@@ -1102,7 +1324,7 @@ $light-lavender: #F8F7FF;
 }
 
 // ==========================================
-// SESSION CAROUSEL
+// SESSION CAROUSEL - RTL Fixed
 // ==========================================
 .carousel-wrapper {
   position: relative;
@@ -1144,10 +1366,22 @@ $light-lavender: #F8F7FF;
 
   &.nav-left {
     left: 0;
+
+    // RTL: Swap navigation sides
+    [dir='rtl'] & {
+      left: auto;
+      right: 0;
+    }
   }
 
   &.nav-right {
     right: 0;
+
+    // RTL: Swap navigation sides
+    [dir='rtl'] & {
+      right: auto;
+      left: 0;
+    }
   }
 }
 
@@ -1163,10 +1397,15 @@ $light-lavender: #F8F7FF;
   &::-webkit-scrollbar {
     display: none;
   }
+
+  // RTL: Reverse scroll direction
+  [dir='rtl'] & {
+    direction: rtl;
+  }
 }
 
 // ==========================================
-// SESSION CARD
+// SESSION CARD - RTL Fixed
 // ==========================================
 .session-card {
   min-width: 440px;
@@ -1176,6 +1415,12 @@ $light-lavender: #F8F7FF;
   padding: 32px;
   box-shadow: 0 2px 12px rgba($deep-purple, 0.1);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  // RTL: Fix text direction inside cards
+  [dir='rtl'] & {
+    direction: rtl;
+    text-align: right;
+  }
 
   &:hover {
     transform: translateY(-8px) scale(1.02);
@@ -1193,6 +1438,11 @@ $light-lavender: #F8F7FF;
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 24px;
+
+  // RTL: Reverse header layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .session-icon-wrapper {
     width: 52px;
@@ -1222,6 +1472,11 @@ $light-lavender: #F8F7FF;
       color: $deep-indigo;
       margin: 0 0 4px 0;
       line-height: 1.3;
+
+      // RTL: Right align
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
 
     .session-topic {
@@ -1230,6 +1485,11 @@ $light-lavender: #F8F7FF;
       color: $muted-purple;
       margin: 0;
       line-height: 1.3;
+
+      // RTL: Right align
+      [dir='rtl'] & {
+        text-align: right;
+      }
     }
   }
 
@@ -1242,6 +1502,11 @@ $light-lavender: #F8F7FF;
     font-size: 12px;
     font-weight: 600;
     flex-shrink: 0;
+
+    // RTL: Reverse badge content
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+    }
 
     .badge-dot {
       width: 8px;
@@ -1310,6 +1575,11 @@ $light-lavender: #F8F7FF;
     color: $muted-purple;
     margin: 0 0 4px 0;
     text-transform: uppercase;
+
+    // RTL: Right align
+    [dir='rtl'] & {
+      text-align: right;
+    }
   }
 
   .info-value {
@@ -1324,6 +1594,11 @@ $light-lavender: #F8F7FF;
     font-size: 11px;
     color: $muted-purple;
     margin: 2px 0 0 0;
+
+    // RTL: Right align
+    [dir='rtl'] & {
+      text-align: right;
+    }
   }
 }
 
@@ -1337,10 +1612,20 @@ $light-lavender: #F8F7FF;
   border: 1px solid rgba($deep-purple, 0.1);
   margin-bottom: 16px;
 
+  // RTL: Reverse homework status layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
+
   .homework-left {
     display: flex;
     align-items: center;
     gap: 12px;
+
+    // RTL: Reverse homework left content
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+    }
 
     .homework-icon {
       width: 20px;
@@ -1379,6 +1664,11 @@ $light-lavender: #F8F7FF;
   gap: 8px;
   padding-top: 16px;
   border-top: 1px solid rgba($deep-purple, 0.1);
+
+  // RTL: Reverse footer layout
+  [dir='rtl'] & {
+    flex-direction: row-reverse;
+  }
 
   .footer-icon {
     width: 16px;
@@ -1469,7 +1759,7 @@ $light-lavender: #F8F7FF;
 }
 
 // ==========================================
-// SETTINGS MODAL
+// SETTINGS MODAL - RTL Fixed
 // ==========================================
 .settings-modal-overlay {
   position: fixed;
@@ -1493,6 +1783,12 @@ $light-lavender: #F8F7FF;
   width: 90%;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   animation: fadeIn 0.4s ease-out;
+
+  // RTL: Fix modal text direction
+  [dir='rtl'] & {
+    direction: rtl;
+    text-align: right;
+  }
 
   h3 {
     margin: 0 0 24px 0;
@@ -1522,6 +1818,11 @@ $light-lavender: #F8F7FF;
       font-size: 14px;
       transition: all 0.2s ease;
 
+      // RTL: Right align input
+      [dir='rtl'] & {
+        text-align: right;
+      }
+
       &:focus {
         outline: none;
         border-color: $deep-purple;
@@ -1544,6 +1845,11 @@ $light-lavender: #F8F7FF;
     display: flex;
     gap: 12px;
     margin-top: 24px;
+
+    // RTL: Reverse button order
+    [dir='rtl'] & {
+      flex-direction: row-reverse;
+    }
 
     .btn {
       flex: 1;
@@ -1627,54 +1933,6 @@ lucide-angular {
   }
 }
 
-// ==========================================
-// RTL SUPPORT (ARABIC)
-// ==========================================
-:host-context([dir='rtl']) {
-  .top-nav .nav-content {
-    flex-direction: row-reverse;
-  }
-
-  .brand {
-    flex-direction: row-reverse;
-  }
-
-  .nav-actions {
-    flex-direction: row-reverse;
-  }
-
-  .hero-content {
-    direction: rtl;
-  }
-
-  .session-info-grid {
-    text-align: right;
-  }
-
-  .carousel-nav {
-    &.nav-left {
-      left: auto;
-      right: 0;
-    }
-
-    &.nav-right {
-      right: auto;
-      left: 0;
-    }
-  }
-
-  .settings-modal {
-    .form-row {
-      text-align: right;
-
-      input {
-        text-align: right;
-        direction: rtl;
-      }
-    }
-  }
-}
-
 // Add these styles to the existing SCSS file
 
 // ==========================================
@@ -1713,6 +1971,12 @@ lucide-angular {
           letter-spacing: 1px;
           margin-right: 8px;
           box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+
+          // RTL: Move margin to left
+          [dir='rtl'] & {
+            margin-right: 0;
+            margin-left: 8px;
+          }
         }
       }
     }
@@ -1730,3 +1994,4 @@ lucide-angular {
     box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
   }
 }
+

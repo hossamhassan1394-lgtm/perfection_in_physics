@@ -3,6 +3,8 @@ import { LoginComponent } from './features/auth/login/login.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 import { ParentDashboardComponent } from './features/dashboard/parent-dashboard/parent-dashboard.component';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard/admin-dashboard.component';
+import { RefreshPageComponent } from './features/refresh-page/refresh-page.component';
+import { ErrorPageComponent } from './features/error-page/error-page.component';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -32,8 +34,16 @@ export const routes: Routes = [
     data: { requiredRole: 'admin' }
   },
   {
+    path: 'refresh',
+    component: RefreshPageComponent
+  },
+  {
+    path: 'error',
+    component: ErrorPageComponent
+  },
+  {
     path: '**',
-    redirectTo: '',
+    redirectTo: 'error',
     pathMatch: 'full'
   }
 ];
