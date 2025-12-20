@@ -542,6 +542,29 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                                     ue_msg = update_error.get('message') if isinstance(update_error, dict) else str(update_error)
                                     errors.append(f"Row {student_id}: {ue_msg}")
                                     logger.error(f"Update failed for {student_id}: {ue_msg}")
+                                    # If update by student_id failed, try by student_name (handles ID changes for same person)
+                                    try:
+                                        logger.info(f"Attempting to find existing record by name '{student_name}' for session {session_number}, group {group}")
+                                        existing = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).limit(1).execute()
+                                        if existing.data and len(existing.data) > 0:
+                                            old_id = existing.data[0].get('student_id')
+                                            if old_id and old_id != student_id:
+                                                # Same person (by name), but different ID. Update the old record to use new ID.
+                                                logger.info(f"Found same person '{student_name}' with old ID '{old_id}', updating to new ID '{student_id}'")
+                                                update_data = dict(db_data)
+                                                update_data['student_id'] = student_id
+                                                update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                                                update_name_error = getattr(update_by_name, 'error', None)
+                                                if not update_name_error:
+                                                    updated_count += 1
+                                                    logger.info(f"Updated student ID from '{old_id}' to '{student_id}' for '{student_name}'")
+                                                    # Remove the error since we successfully updated
+                                                    errors.pop()
+                                                else:
+                                                    name_err = update_name_error.get('message') if isinstance(update_name_error, dict) else str(update_name_error)
+                                                    logger.error(f"Name-based update failed for {student_name}: {name_err}")
+                                    except Exception as name_err:
+                                        logger.warning(f"Name-based lookup/update exception for {student_name}: {str(name_err)}")
                             except Exception as update_err:
                                 errors.append(f"Row {student_id}: {str(update_err)}")
                                 logger.exception(f"Update exception for {student_id}: {str(update_err)}")

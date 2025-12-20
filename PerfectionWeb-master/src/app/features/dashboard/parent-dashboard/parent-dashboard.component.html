@@ -77,8 +77,8 @@
           {{ lang() === 'en' ? 'SELECT STUDENT' : 'اختر الطالب' }}
         </label>
         <div class="select-container">
-          <select id="student-select" class="student-select" [(ngModel)]="selectedStudentId"
-            (ngModelChange)="onStudentChange($event)">
+          <select id="student-select" class="student-select" [ngModel]="selectedStudentId()"
+            (ngModelChange)="onStudentChange($event)" [disabled]="students().length <= 1">
             <option *ngFor="let student of students()" [value]="student.id">
               {{ student.name }}
             </option>

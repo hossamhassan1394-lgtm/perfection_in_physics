@@ -169,6 +169,7 @@ export class ParentDashboardComponent implements OnInit {
 
   onStudentChange(studentIdOrEvent: any): void {
     const id = typeof studentIdOrEvent === 'string' ? studentIdOrEvent : String(studentIdOrEvent);
+    this.selectedStudentId.set(id);
     const student = this.students().find(s => s.id === id);
     if (student) {
       this.selectedStudent.set(student);
@@ -218,50 +219,21 @@ export class ParentDashboardComponent implements OnInit {
     });
   }
 
-  // Calculate attendance percentage
-  getAttendancePercentage(): number {
-    const total = this.sessionCount();
-    const attended = this.attendedCount();
-    if (total === 0) return 0;
-    return Math.round((attended / total) * 100);
+  /*onStudentChange(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const studentId = Number(selectElement.value);
+    const student = this.students().find(s => s.id === studentId);
+    if (student) {
+      this.selectedStudent.set(student);
+      this.loadSessions(student.id);
+    }
   }
-
-  // Get total paid amount from sessions
-  getTotalPayment(): number {
-    return this.sessions().reduce((sum, session) => sum + (session.payment || 0), 0);
-  }
-
-  // Calculate quiz performance percentage
-  getQuizPerformance(): number {
-    const sessions = this.sessions();
-    let totalCorrect = 0;
-    let totalQuestions = 0;
-
-    sessions.forEach(session => {
-      if (session.attendance === 'attended') {
-        totalCorrect += session.quizCorrect || 0;
-        totalQuestions += (session.adminQuizMark || session.quizTotal || 0);
-      }
-    });
-
-    if (totalQuestions === 0) return 0;
-    return Math.round((totalCorrect / totalQuestions) * 100);
-  }
-
-  // Get quiz details for display
-  getQuizDetails(): { correct: number; total: number } {
-    const sessions = this.sessions();
-    let totalCorrect = 0;
-    let totalQuestions = 0;
-
-    sessions.forEach(session => {
-      if (session.attendance === 'attended') {
-        totalCorrect += session.quizCorrect || 0;
-        totalQuestions += (session.adminQuizMark || session.quizTotal || 0);
-      }
-    });
-
-    return { correct: totalCorrect, total: totalQuestions };
+*/
+  getPaymentPercentage(): number {
+    const student = this.selectedStudent();
+    if (!student) return 0;
+    const { paid, total } = student.payments;
+    return paid;
   }
 
   scrollSessions(direction: 'left' | 'right'): void {
