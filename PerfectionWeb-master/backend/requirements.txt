@@ -1,7 +1,9 @@
 Flask==2.3.2
 Flask-CORS==4.0.0
 supabase==1.0.3
-pandas==2.0.3
+# Ensure a prebuilt NumPy wheel is installed before pandas to avoid building from source
+numpy==1.26.4
+pandas==2.1.2
 openpyxl==3.1.1
 python-dateutil==2.8.2
 python-dotenv==1.0.0
