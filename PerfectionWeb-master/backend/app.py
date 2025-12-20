@@ -138,6 +138,30 @@ def normalize_timestamp(value):
     return s
 
 
+def normalize_name(name: str) -> str:
+    """Normalize a person name for matching: lower-case, collapse whitespace,
+    remove common Arabic diacritics and Unicode combining marks to improve matching
+    across uploads."""
+    if not name:
+        return ''
+    try:
+        import unicodedata
+        s = str(name).strip().lower()
+        # remove Arabic diacritics (harakat)
+        s = re.sub(r'[\u064B-\u0652]', '', s)
+        # normalize and remove combining marks
+        nfkd = unicodedata.normalize('NFKD', s)
+        s = ''.join(ch for ch in nfkd if not unicodedata.combining(ch))
+        # collapse whitespace
+        s = re.sub(r'\s+', ' ', s).strip()
+        return s
+    except Exception:
+        try:
+            return re.sub(r'\s+', ' ', str(name).strip().lower())
+        except Exception:
+            return str(name).strip().lower()
+
+
 def format_start_time_arabic(value):
     """Format a datetime-like value into DD/MM/YYYY HH:MM:SS plus Arabic AM/PM marker (ص for AM, م for PM)."""
     # If value is missing/empty, show explicit placeholder for frontend
@@ -527,61 +551,107 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                 if record.get('student_no'):
                     db_data['student_no'] = str(record.get('student_no')).strip()
                 
-                # Try to insert record; handle Supabase response errors (client may not raise)
+                # Before inserting, try to find an existing record by the new uniqueness key
                 try:
+                    # Fetch any records with the same parent_no and then perform a normalized, case-insensitive
+                    # name comparison locally so we match common name variations. This avoids relying on exact
+                    # string equality from different uploads.
+                    existing = supabase.table('session_records').select('student_id', 'student_name').eq('parent_no', parent_no).limit(200).execute()
+                    existing_error = getattr(existing, 'error', None)
+                    if existing_error:
+                        logger.warning("Error while searching existing records by parent_no: %s", str(existing_error))
+
+                    found_old = None
+                    matched_old_ids = []
+                    try:
+                        incoming_norm = normalize_name(student_name)
+                    except Exception:
+                        incoming_norm = student_name.strip().lower()
+
+                    if existing and getattr(existing, 'data', None):
+                        for r in existing.data:
+                            stored_name = (r.get('student_name') or '').strip()
+                            try:
+                                stored_norm = normalize_name(stored_name)
+                            except Exception:
+                                stored_norm = stored_name.lower()
+                            if stored_norm == incoming_norm:
+                                sid = r.get('student_id')
+                                if sid:
+                                    matched_old_ids.append(sid)
+                        if matched_old_ids:
+                            # pick the first as representative
+                            found_old = matched_old_ids[0]
+
+                    if matched_old_ids:
+                        # If we found matches, update ALL rows for each matched old id so this person keeps one id
+                        for found in matched_old_ids:
+                            if found != db_data['student_id']:
+                                try:
+                                    update_data = dict(db_data)
+                                    update_data['student_id'] = db_data['student_id']
+                                    upd = supabase.table('session_records').update(update_data).eq('student_id', found).execute()
+                                    upd_err = getattr(upd, 'error', None)
+                                    if not upd_err:
+                                        updated_count += 1
+                                        logger.info("Updated all records for existing ID %s -> %s for %s", found, db_data['student_id'], student_name)
+                                    else:
+                                        ue = upd_err.get('message') if isinstance(upd_err, dict) else str(upd_err)
+                                        logger.warning("Failed to update existing records %s: %s", found, ue)
+                                except Exception as ex_upd:
+                                    logger.exception("Exception updating existing records %s: %s", found, str(ex_upd))
+
+                    # If no existing matching record, try to insert
                     insert_res = supabase.table('session_records').insert(db_data).execute()
                     insert_error = getattr(insert_res, 'error', None)
                     if not insert_error:
                         updated_count += 1
-                        logger.info(f"Inserted record for {student_id} (session {session_number}, group {group})")
+                        logger.info(f"Inserted record for {db_data.get('student_id')} (session {session_number}, group {group})")
                     else:
                         error_msg = insert_error.get('message') if isinstance(insert_error, dict) else str(insert_error)
-                        logger.warning(f"Insert returned error for {student_id}: {error_msg}")
-                        # Check for duplicate key constraint
+                        logger.warning(f"Insert returned error for {db_data.get('student_id')}: {error_msg}")
+                        # If duplicate key, attempt best-effort updates
                         if '23505' in str(error_msg) or 'duplicate' in str(error_msg).lower() or 'unique' in str(error_msg).lower():
                             try:
-                                update_res = supabase.table('session_records').update(db_data).eq('student_id', student_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                                # First try to update by student_id
+                                update_res = supabase.table('session_records').update(db_data).eq('student_id', db_data.get('student_id')).eq('session_number', session_number).eq('is_general_exam', is_general_exam).execute()
                                 update_error = getattr(update_res, 'error', None)
                                 if not update_error:
                                     updated_count += 1
-                                    logger.info(f"Updated duplicate record for {student_id}")
+                                    logger.info(f"Updated duplicate record for {db_data.get('student_id')}")
                                 else:
                                     ue_msg = update_error.get('message') if isinstance(update_error, dict) else str(update_error)
-                                    errors.append(f"Row {student_id}: {ue_msg}")
-                                    logger.error(f"Update failed for {student_id}: {ue_msg}")
-                                    # If update by student_id failed, try by student_name (handles ID changes for same person)
+                                    errors.append(f"Row {db_data.get('student_id')}: {ue_msg}")
+                                    logger.error(f"Update failed for {db_data.get('student_id')}: {ue_msg}")
+                                    # Try updating by uniqueness (student_name + session_number + parent_no)
                                     try:
-                                        logger.info(f"Attempting to find existing record by name '{student_name}' for session {session_number}, group {group}")
-                                        existing = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).limit(1).execute()
-                                        if existing.data and len(existing.data) > 0:
-                                            old_id = existing.data[0].get('student_id')
-                                            if old_id and old_id != student_id:
-                                                # Same person (by name), but different ID. Update the old record to use new ID.
-                                                logger.info(f"Found same person '{student_name}' with old ID '{old_id}', updating to new ID '{student_id}'")
+                                        # fallback: search by name + parent_no across sessions
+                                        existing2 = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('parent_no', parent_no).limit(1).execute()
+                                        if existing2 and getattr(existing2, 'data', None) and len(existing2.data) > 0:
+                                            old_id = existing2.data[0].get('student_id')
+                                            if old_id and old_id != db_data.get('student_id'):
                                                 update_data = dict(db_data)
-                                                update_data['student_id'] = student_id
-                                                update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                                                update_data['student_id'] = db_data.get('student_id')
+                                                update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('parent_no', parent_no).eq('is_general_exam', is_general_exam).execute()
                                                 update_name_error = getattr(update_by_name, 'error', None)
                                                 if not update_name_error:
                                                     updated_count += 1
-                                                    logger.info(f"Updated student ID from '{old_id}' to '{student_id}' for '{student_name}'")
-                                                    # Remove the error since we successfully updated
-                                                    errors.pop()
+                                                    logger.info(f"Updated student ID from '{old_id}' to '{db_data.get('student_id')}' for '{student_name}'")
                                                 else:
                                                     name_err = update_name_error.get('message') if isinstance(update_name_error, dict) else str(update_name_error)
                                                     logger.error(f"Name-based update failed for {student_name}: {name_err}")
                                     except Exception as name_err:
                                         logger.warning(f"Name-based lookup/update exception for {student_name}: {str(name_err)}")
                             except Exception as update_err:
-                                errors.append(f"Row {student_id}: {str(update_err)}")
-                                logger.exception(f"Update exception for {student_id}: {str(update_err)}")
+                                errors.append(f"Row {db_data.get('student_id')}: {str(update_err)}")
+                                logger.exception(f"Update exception for {db_data.get('student_id')}: {str(update_err)}")
                         else:
-                            errors.append(f"Row {student_id}: {error_msg}")
+                            errors.append(f"Row {db_data.get('student_id')}: {error_msg}")
                 except Exception as e:
                     # Exception from Supabase client call
                     err_text = str(e)
-                    errors.append(f"Row {student_id}: {err_text}")
-                    logger.exception(f"Insert exception for {student_id}: {err_text}")
+                    errors.append(f"Row {db_data.get('student_id')}: {err_text}")
+                    logger.exception(f"Insert exception for {db_data.get('student_id')}: {err_text}")
                     
             except Exception as e:
                 errors.append(str(e))
