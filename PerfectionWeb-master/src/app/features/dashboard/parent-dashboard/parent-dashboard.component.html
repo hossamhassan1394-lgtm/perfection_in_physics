@@ -18,8 +18,8 @@
         <div class="user-info">
           <div class="status-dot"></div>
           <div class="user-details">
-            <p class="user-name">{{ selectedStudent()?.name || 'Ahmed Hassan' }}</p>
-            <p class="user-grade">{{ selectedStudent()?.grade || '3rd Secondary (Grade 12)' }}</p>
+            <p class="user-name">{{ selectedStudent()?.name || 'Parent Portal' }}</p>
+            <p class="user-grade">{{ selectedStudent()?.grade || 'Select a student' }}</p>
           </div>
         </div>
 
@@ -77,10 +77,10 @@
           {{ lang() === 'en' ? 'SELECT STUDENT' : 'اختر الطالب' }}
         </label>
         <div class="select-container">
-          <select id="student-select" class="student-select" [ngModel]="selectedStudentId()"
-            (ngModelChange)="onStudentChange($event)" [disabled]="students().length <= 1">
-            <option *ngFor="let student of students()" [value]="student.id">
-              {{ student.name }}
+          <select id="student-select" class="student-select" [(ngModel)]="selectedStudentCombinedId"
+            (ngModelChange)="onStudentChange($event)">
+            <option *ngFor="let student of uniqueStudents()" [value]="student.combinedId">
+              {{ student.name }} ({{ student.parentNumber }})
             </option>
           </select>
           <lucide-angular [img]="ChevronDown" class="select-arrow"></lucide-angular>
@@ -94,21 +94,27 @@
           <div class="hero-content">
             <!-- Left Section -->
             <div class="hero-left">
-              <p class="hero-welcome">Welcome</p>
+              <p class="hero-welcome">{{ lang() === 'en' ? 'Welcome' : 'مرحباً' }}</p>
               <h2 class="hero-name">{{ selectedStudent()!.name }}</h2>
               <div class="hero-meta">
-                <span class="student-id-badge">{{ selectedStudent()!.id }}</span>
+                <span class="student-id-badge">
+                  {{ lang() === 'en' ? 'Parent' : 'ولي الأمر' }}: {{ selectedStudent()!.parentNumber }}
+                </span>
                 <span class="student-grade">{{ selectedStudent()!.grade }}</span>
               </div>
               <div class="hero-stats-pills">
                 <span class="stat-pill">
                   <lucide-angular [img]="Calendar" class="pill-icon"></lucide-angular>
-                  {{ sessionCount() }} {{ sessionCount() === 1 ? 'Session' : 'Sessions' }}
+                  {{ sessionCount() }} {{ sessionCount() === 1 ? (lang() === 'en' ? 'Session' : 'جلسة') : (lang() === 'en' ? 'Sessions' : 'جلسات') }}
+                </span>
+                <span class="stat-pill" *ngIf="selectedStudent()!.ids.length > 1">
+                  <lucide-angular [img]="Users" class="pill-icon"></lucide-angular>
+                  {{ selectedStudent()!.ids.length }} {{ lang() === 'en' ? 'Records Merged' : 'سجل مدمج' }}
                 </span>
               </div>
               <div class="location-pill">
                 <lucide-angular [img]="MapPin" class="location-icon"></lucide-angular>
-                Alexandria, Egypt
+                {{ lang() === 'en' ? 'Alexandria, Egypt' : 'الإسكندرية، مصر' }}
               </div>
             </div>
 
@@ -132,13 +138,13 @@
           </div>
         </div>
 
-        <!-- Shamel Grade Panel -->
+        <!-- Shamel Grade Panel - ONLY SHOWS IF ATTENDED -->
         <div *ngIf="hasShamelData()" class="shamel-panel">
           <div class="shamel-section shamel-current">
             <div class="section-header">
               <lucide-angular [img]="Trophy" class="header-icon"></lucide-angular>
-              <span class="header-label">{{ lang() === 'en' ? 'CURRENT SHAMEL GRADE / GENERAL EXAM' : 'درجة الشامل الحالية / الامتحان العام' }}</span>
-              <span class="date-badge">December 2025</span>
+              <span class="header-label">{{ lang() === 'en' ? 'GENERAL EXAM RESULT (SHAMEL)' : 'نتيجة الامتحان العام (الشامل)' }}</span>
+              <span class="date-badge">{{ lang() === 'en' ? 'Attended' : 'حضر' }} ✓</span>
             </div>
             <div class="shamel-grade-display">
               <div class="grade-numbers">
@@ -146,7 +152,7 @@
                 <span class="grade-separator">/</span>
                 <span class="grade-total">{{ getCurrentShamel().total }}</span>
               </div>
-              <p class="grade-subtitle">{{ getCurrentShamel().label || 'Comprehensive Assessment' }}</p>
+              <p class="grade-subtitle">{{ getCurrentShamel().label || (lang() === 'en' ? 'Comprehensive Assessment' : 'التقييم الشامل') }}</p>
             </div>
             <div class="circular-progress">
               <svg viewBox="0 0 140 140" class="progress-svg">
@@ -172,7 +178,7 @@
           <div class="stat-content">
             <p class="stat-label">{{ lang() === 'en' ? 'ATTENDANCE RATE' : 'معدل الحضور' }}</p>
             <p class="stat-value">{{ getAttendancePercentage() }}%</p>
-            <p class="stat-detail">{{ attendedCount() }}/{{ sessionCount() }} sessions</p>
+            <p class="stat-detail">{{ attendedCount() }}/{{ sessionCount() }} {{ lang() === 'en' ? 'sessions' : 'جلسات' }}</p>
           </div>
           <div class="stat-visual">
             <svg viewBox="0 0 100 100" class="ring-svg">
@@ -206,7 +212,7 @@
           <div class="stat-content">
             <p class="stat-label">{{ lang() === 'en' ? 'QUIZ PERFORMANCE' : 'أداء الاختبار' }}</p>
             <p class="stat-value">{{ getQuizPerformance() }}%</p>
-            <p class="stat-detail">{{ getQuizDetails().correct }}/{{ getQuizDetails().total }} correct</p>
+            <p class="stat-detail">{{ getQuizDetails().correct }}/{{ getQuizDetails().total }} {{ lang() === 'en' ? 'correct' : 'صحيح' }}</p>
           </div>
           <div class="stat-visual">
             <div class="bar-chart">
@@ -222,8 +228,8 @@
           <div class="section-title-group">
             <lucide-angular [img]="BookOpen" class="title-icon"></lucide-angular>
             <div>
-              <h3 class="section-title">Session History</h3>
-              <p class="section-subtitle">Detailed record of all physics sessions</p>
+              <h3 class="section-title">{{ lang() === 'en' ? 'Session History' : 'سجل الجلسات' }}</h3>
+              <p class="section-subtitle">{{ lang() === 'en' ? 'Detailed record of all physics sessions' : 'سجل مفصل لجميع جلسات الفيزياء' }}</p>
             </div>
           </div>
         </div>
@@ -235,23 +241,22 @@
           </button>
 
           <div class="session-cards" #sessionCarousel>
-            <div *ngFor="let session of sessions()" class="session-card" [class.general-exam-card]="session.is_general_exam">
+            <div *ngFor="let session of sessions()" class="session-card" [class.general-exam-card]="isGeneralExamSession(session)">
               <!-- Session Header -->
               <div class="session-header">
-                <div class="session-icon-wrapper" [class.general-exam-icon]="session.is_general_exam">
-                  <lucide-angular [img]="session.is_general_exam ? Trophy : Zap" class="session-icon"></lucide-angular>
+                <div class="session-icon-wrapper" [class.general-exam-icon]="isGeneralExamSession(session)">
+                  <lucide-angular [img]="isGeneralExamSession(session) ? Trophy : Zap" class="session-icon"></lucide-angular>
                 </div>
                 <div class="session-title-group">
                   <h4 class="session-title">
-                    <span *ngIf="session.is_general_exam" class="exam-badge">🏆 GENERAL EXAM</span>
+                    <span *ngIf="isGeneralExamSession(session)" class="exam-badge">🏆 {{ lang() === 'en' ? 'GENERAL EXAM' : 'امتحان عام' }}</span>
                     {{ session.lectureName || ('Session #' + session.id + ' • Chapter ' + session.chapter) }}
                   </h4>
                   <p class="session-topic">{{ session.name }}</p>
                 </div>
                 <span class="status-badge" [ngClass]="session.attendance">
                   <span class="badge-dot"></span>
-                  {{ session.attendance === 'attended' ? 'Attended' : session.attendance === 'upcoming' ? 'Upcoming' :
-                  'Missed' }}
+                  {{ session.attendance === 'attended' ? (lang() === 'en' ? 'Attended' : 'حضر') : session.attendance === 'upcoming' ? (lang() === 'en' ? 'Upcoming' : 'قادم') : (lang() === 'en' ? 'Missed' : 'غائب') }}
                 </span>
               </div>
 
@@ -318,7 +323,7 @@
                   <span class="homework-label">{{ lang() === 'en' ? 'Homework Status' : 'حالة الواجب' }}</span>
                 </div>
                 <span class="homework-badge" [ngClass]="session.homeworkStatus">
-                  {{ session.homeworkStatus === 'completed' ? 'Completed' : 'Pending' }}
+                  {{ session.homeworkStatus === 'completed' ? (lang() === 'en' ? 'Completed' : 'مكتمل') : (lang() === 'en' ? 'Pending' : 'معلق') }}
                 </span>
               </div>
 

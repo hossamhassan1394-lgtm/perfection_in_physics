@@ -14,7 +14,7 @@ $light-lavender: #F8F7FF;
 // ==========================================
 .dashboard-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, $light-lavender 0%, #F0EEFF 100%);
+  background: linear-gradient(135deg, $light-lavender 100%, #c2e7f4e8 0%);
   position: relative;
   overflow-x: hidden;
 }
@@ -28,7 +28,7 @@ $light-lavender: #F8F7FF;
   left: 0;
   right: 0;
   height: 80px;
-  background: white;
+  background:linear-gradient(135deg, $light-lavender 100%, blue 0%);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   z-index: 1000;
 

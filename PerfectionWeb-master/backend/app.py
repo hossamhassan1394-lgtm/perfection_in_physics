@@ -456,7 +456,8 @@ def create_or_update_parent(parent_no, student_name=None):
 
 def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam, lecture_name='', exam_name='', has_exam_grade=True, has_payment=True, has_time=True):
     """
-    Update database with parsed records - Insert ALL records without validation
+    Update database with parsed records using UPSERT logic
+    Works with existing constraint: UNIQUE (student_name, session_number, parent_no)
     """
     try:
         updated_count = 0
@@ -469,9 +470,15 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                 parent_no_raw = record.get('parent_no', '') or ''
                 parent_no = normalize_phone(parent_no_raw) or ''
 
-                # New schema requires parent_no and student_name to be present
+                # Validate required fields
                 if not parent_no:
-                    msg = f"Missing or invalid parent_no for student '{student_name}' (raw='{parent_no_raw}')"
+                    msg = f"Missing parent_no for student '{student_name}' (raw='{parent_no_raw}')"
+                    logger.warning(msg)
+                    errors.append(msg)
+                    continue
+                
+                if not student_name or student_name == 'Unknown':
+                    msg = f"Missing student_name for id '{student_id}'"
                     logger.warning(msg)
                     errors.append(msg)
                     continue
@@ -483,7 +490,7 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                     'parent_no': parent_no,
                     'session_number': session_number,
                     'group_name': group,
-                    'is_general_exam': is_general_exam,
+                    'is_general_exam': bool(is_general_exam),  # CRITICAL: Ensure boolean
                     'attendance': int(record.get('attendance', 0)) if record.get('attendance') else 0,
                     'payment': float(record.get('payment', 0)) if record.get('payment') else 0,
                 }
@@ -499,11 +506,10 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                     db_data['admin_quiz_mark'] = float(quiz_mark)
                 
                 # Add optional fields
-                if record.get('quiz_mark'):
+                if record.get('quiz_mark') is not None:
                     db_data['quiz_mark'] = float(record.get('quiz_mark'))
                 
                 if finish_time:
-                    # Normalize finish_time to a Postgres-friendly format
                     try:
                         normalized_finish = normalize_timestamp(finish_time)
                         db_data['finish_time'] = normalized_finish if normalized_finish else finish_time
@@ -511,7 +517,6 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                         db_data['finish_time'] = finish_time
 
                 if record.get('start_time'):
-                    # Normalize start_time from the parsed record (handles Arabic AM/PM, etc.)
                     try:
                         normalized_start = normalize_timestamp(record.get('start_time'))
                         db_data['start_time'] = normalized_start if normalized_start else record.get('start_time')
@@ -527,68 +532,58 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                 if record.get('student_no'):
                     db_data['student_no'] = str(record.get('student_no')).strip()
                 
-                # Try to insert record; handle Supabase response errors (client may not raise)
+                # UPSERT LOGIC: Try INSERT, if fails due to unique constraint, UPDATE
                 try:
+                    logger.info(f"Processing {student_name} (session {session_number}, parent {parent_no}, is_general_exam={is_general_exam})")
+                    
+                    # Try INSERT first
                     insert_res = supabase.table('session_records').insert(db_data).execute()
                     insert_error = getattr(insert_res, 'error', None)
+                    
                     if not insert_error:
                         updated_count += 1
-                        logger.info(f"Inserted record for {student_id} (session {session_number}, group {group})")
+                        logger.info(f"✓ Inserted new record for {student_name}")
                     else:
-                        error_msg = insert_error.get('message') if isinstance(insert_error, dict) else str(insert_error)
-                        logger.warning(f"Insert returned error for {student_id}: {error_msg}")
-                        # Check for duplicate key constraint
-                        if '23505' in str(error_msg) or 'duplicate' in str(error_msg).lower() or 'unique' in str(error_msg).lower():
-                            try:
-                                update_res = supabase.table('session_records').update(db_data).eq('student_id', student_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
-                                update_error = getattr(update_res, 'error', None)
-                                if not update_error:
-                                    updated_count += 1
-                                    logger.info(f"Updated duplicate record for {student_id}")
-                                else:
-                                    ue_msg = update_error.get('message') if isinstance(update_error, dict) else str(update_error)
-                                    errors.append(f"Row {student_id}: {ue_msg}")
-                                    logger.error(f"Update failed for {student_id}: {ue_msg}")
-                                    # If update by student_id failed, try by student_name (handles ID changes for same person)
-                                    try:
-                                        logger.info(f"Attempting to find existing record by name '{student_name}' for session {session_number}, group {group}")
-                                        existing = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).limit(1).execute()
-                                        if existing.data and len(existing.data) > 0:
-                                            old_id = existing.data[0].get('student_id')
-                                            if old_id and old_id != student_id:
-                                                # Same person (by name), but different ID. Update the old record to use new ID.
-                                                logger.info(f"Found same person '{student_name}' with old ID '{old_id}', updating to new ID '{student_id}'")
-                                                update_data = dict(db_data)
-                                                update_data['student_id'] = student_id
-                                                update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
-                                                update_name_error = getattr(update_by_name, 'error', None)
-                                                if not update_name_error:
-                                                    updated_count += 1
-                                                    logger.info(f"Updated student ID from '{old_id}' to '{student_id}' for '{student_name}'")
-                                                    # Remove the error since we successfully updated
-                                                    errors.pop()
-                                                else:
-                                                    name_err = update_name_error.get('message') if isinstance(update_name_error, dict) else str(update_name_error)
-                                                    logger.error(f"Name-based update failed for {student_name}: {name_err}")
-                                    except Exception as name_err:
-                                        logger.warning(f"Name-based lookup/update exception for {student_name}: {str(name_err)}")
-                            except Exception as update_err:
-                                errors.append(f"Row {student_id}: {str(update_err)}")
-                                logger.exception(f"Update exception for {student_id}: {str(update_err)}")
+                        # Check if it's a unique constraint violation
+                        error_msg = str(insert_error)
+                        if '23505' in error_msg or 'duplicate' in error_msg.lower() or 'unique' in error_msg.lower():
+                            # Record exists - UPDATE using the unique constraint fields
+                            logger.info(f"→ Duplicate detected, updating {student_name}")
+                            
+                            update_res = supabase.table('session_records')\
+                                .update(db_data)\
+                                .eq('student_name', student_name)\
+                                .eq('parent_no', parent_no)\
+                                .eq('session_number', session_number)\
+                                .execute()
+                            
+                            update_error = getattr(update_res, 'error', None)
+                            if not update_error:
+                                updated_count += 1
+                                logger.info(f"✓ Updated existing record for {student_name}")
+                            else:
+                                ue_msg = str(update_error)
+                                errors.append(f"{student_name}: Update failed - {ue_msg}")
+                                logger.error(f"✗ Update failed for {student_name}: {ue_msg}")
                         else:
-                            errors.append(f"Row {student_id}: {error_msg}")
+                            # Some other error
+                            errors.append(f"{student_name}: Insert failed - {error_msg}")
+                            logger.error(f"✗ Insert failed for {student_name}: {error_msg}")
+                            
                 except Exception as e:
-                    # Exception from Supabase client call
                     err_text = str(e)
-                    errors.append(f"Row {student_id}: {err_text}")
-                    logger.exception(f"Insert exception for {student_id}: {err_text}")
+                    errors.append(f"{student_name}: Exception - {err_text}")
+                    logger.exception(f"✗ Exception processing {student_name}: {err_text}")
                     
-            except Exception as e:
-                errors.append(str(e))
+            except Exception as record_error:
+                errors.append(f"Record processing error: {str(record_error)}")
+                logger.exception(f"✗ Record error: {str(record_error)}")
         
-        logger.info(f"Upload summary: {updated_count}/{len(records)} records uploaded, {len(errors)} errors")
+        logger.info(f"═══ Upload Complete: {updated_count}/{len(records)} successful, {len(errors)} errors ═══")
         return updated_count, errors
+        
     except Exception as e:
+        logger.exception(f"✗ Critical error in update_database: {str(e)}")
         raise Exception(f"Error updating database: {str(e)}")
 
 @app.route('/api/health', methods=['GET'])
@@ -748,141 +743,149 @@ def get_sessions():
 
 @app.route('/api/parent/students', methods=['GET'])
 def get_parent_students():
-    """Return aggregated student list for a parent identified by phone_number="""
+    """Return aggregated student list for a parent, grouped by parent_no + student_name"""
     phone = request.args.get('phone_number')
     if not phone:
         return jsonify({'error': 'phone_number query parameter required'}), 400
     phone = normalize_phone(phone)
 
     try:
-        # Fetch all session records for this parent
         result = supabase.table('session_records').select('*').eq('parent_no', phone).execute()
         records = result.data or []
 
-        # Aggregate by student_id
+        # Group by student_name (matches database UNIQUE constraint)
         students_map = {}
         for r in records:
-            sid = r.get('student_id')
-            if not sid:
+            student_name = (r.get('student_name') or '').strip()
+            if not student_name:
                 continue
-            entry = students_map.setdefault(sid, {
-                'id': sid,
-                'name': r.get('student_name') or '',
-                'grade': '',
-                'attendance_count': 0,
-                'records_count': 0,
-                'payments_sum': 0.0,
-                'quiz_sum': 0.0,
-                'quiz_count': 0
-            })
-
+            
+            # Use student_name as key (stable across uploads)
+            if student_name not in students_map:
+                students_map[student_name] = {
+                    'name': student_name,
+                    'parent_no': phone,
+                    'ids': set(),
+                    'grade': '',
+                    'attendance_count': 0,
+                    'records_count': 0,
+                    'payments_sum': 0.0,
+                    'quiz_sum': 0.0,
+                    'quiz_count': 0
+                }
+            
+            entry = students_map[student_name]
+            
+            # Track all student_ids (for reference)
+            student_id = r.get('student_id')
+            if student_id:
+                entry['ids'].add(student_id)
+            
             entry['records_count'] += 1
-            try:
-                entry['attendance_count'] += int(r.get('attendance') or 0)
-            except:
-                pass
-            try:
-                entry['payments_sum'] += float(r.get('payment') or 0)
-            except:
-                pass
-            try:
-                if r.get('quiz_mark') is not None:
-                    entry['quiz_sum'] += float(r.get('quiz_mark'))
-                    entry['quiz_count'] += 1
-            except:
-                pass
+            entry['attendance_count'] += int(r.get('attendance', 0))
+            entry['payments_sum'] += float(r.get('payment', 0))
+            
+            quiz_mark = r.get('quiz_mark')
+            if quiz_mark is not None:
+                entry['quiz_sum'] += float(quiz_mark)
+                entry['quiz_count'] += 1
 
         students = []
-        for sid, v in students_map.items():
-            attendance_pct = 0
-            if v['records_count'] > 0:
-                attendance_pct = round((v['attendance_count'] / v['records_count']) * 100)
-
-            # Assume per-session expected payment 140 if no better info
+        for name, v in students_map.items():
+            attendance_pct = round((v['attendance_count'] / v['records_count']) * 100) if v['records_count'] > 0 else 0
             total_expected = v['records_count'] * 140
             quizzes_avg = round((v['quiz_sum'] / v['quiz_count']), 2) if v['quiz_count'] > 0 else 0
 
             students.append({
-                'id': v['id'],
+                'id': v['parent_no'],  # Use parent_no as stable ID
                 'name': v['name'],
                 'grade': v.get('grade', ''),
                 'attendance': attendance_pct,
-                'payments': { 'paid': v['payments_sum'], 'total': total_expected },
-                'quizzes': { 'average': quizzes_avg, 'total': v['quiz_count'] }
+                'payments': {'paid': v['payments_sum'], 'total': total_expected},
+                'quizzes': {'average': quizzes_avg, 'total': v['quiz_count']}
             })
 
         return jsonify({'students': students}), 200
     except Exception as e:
-        return jsonify({'error': f'Error fetching students: {str(e)}', 'traceback': traceback.format_exc()}), 500
-
-
+        logger.exception(f"Error fetching students: {str(e)}")
+        return jsonify({'error': f'Error fetching students: {str(e)}'}), 500
+    
+    
 @app.route('/api/parent/sessions', methods=['GET'])
 def get_parent_sessions():
-    """Return session records for a parent and optional student_id query param
-    Filters fields based on has_exam_grade, has_payment, and has_time flags"""
+    """Return session records for a parent with proper boolean handling"""
     phone = request.args.get('phone_number')
-    student_id = request.args.get('student_id')
     if not phone:
         return jsonify({'error': 'phone_number query parameter required'}), 400
     phone = normalize_phone(phone)
 
     try:
         query = supabase.table('session_records').select('*').eq('parent_no', phone)
-        if student_id:
-            query = query.eq('student_id', student_id)
-
         result = query.execute()
         records = result.data or []
 
         sessions = []
         for r in records:
-            # Check which fields should be displayed based on admin flags
             has_exam_grade = r.get('has_exam_grade', True)
             has_payment = r.get('has_payment', True)
             has_time = r.get('has_time', True)
             
-            # Build session object, filtering based on admin flags
-            # Format start_time to DD/MM/YYYY HH:MM:SS plus Arabic AM/PM marker
-            formatted_start = format_start_time_arabic(r.get('start_time') or r.get('startTime') or r.get('start_time'))
+            # CRITICAL FIX: Properly handle is_general_exam boolean
+            is_general_exam_raw = r.get('is_general_exam')
+            is_general_exam = False
+            
+            # Handle all possible true values
+            if is_general_exam_raw is True:
+                is_general_exam = True
+            elif isinstance(is_general_exam_raw, str) and is_general_exam_raw.lower() == 'true':
+                is_general_exam = True
+            elif isinstance(is_general_exam_raw, int) and is_general_exam_raw == 1:
+                is_general_exam = True
+            
+            formatted_start = format_start_time_arabic(r.get('start_time'))
 
             session = {
                 'id': r.get('id') or r.get('student_no') or r.get('student_id'),
                 'chapter': r.get('session_number'),
-                'name': r.get('lecture_name') or r.get('exam_name') or r.get('student_name') or f"Session {r.get('session_number')}",
+                'name': r.get('lecture_name') or r.get('exam_name') or f"Session {r.get('session_number')}",
                 'lectureName': r.get('lecture_name') or r.get('exam_name'),
                 'date': r.get('finish_time') or '',
                 'startTime': formatted_start,
                 'start_time': formatted_start,
                 'attendance': 'attended' if int(r.get('attendance') or 0) == 1 else 'missed',
-                'homeworkStatus': 'completed' if (r.get('homework_status') in (0, None)) else 'pending'
+                'homeworkStatus': 'completed' if (r.get('homework_status') in (0, None)) else 'pending',
+                'is_general_exam': is_general_exam,
+                'isGeneralExam': is_general_exam
             }
             
-            # Conditionally add quiz mark only if has_exam_grade is true
             if has_exam_grade:
-                session['quizCorrect'] = int(r.get('quiz_mark') or 0)
-                session['quizTotal'] = 15
-                # Add admin quiz mark if available
-                if r.get('admin_quiz_mark'):
-                    session['adminQuizMark'] = int(r.get('admin_quiz_mark') or 15)
+                quiz_mark = int(r.get('quiz_mark') or 0)
+                admin_quiz_mark = r.get('admin_quiz_mark')
+                
+                session['quizCorrect'] = quiz_mark
+                
+                if admin_quiz_mark is not None:
+                    session['adminQuizMark'] = int(admin_quiz_mark)
+                    session['quizTotal'] = int(admin_quiz_mark)
+                else:
+                    session['quizTotal'] = 15
             
-            # Conditionally add payment only if has_payment is true
             if has_payment:
                 session['payment'] = float(r.get('payment') or 0)
             
-            # Conditionally add finish time only if has_time is true
             if has_time:
                 session['endTime'] = r.get('finish_time') or ''
             
             sessions.append(session)
 
-        # Sort by chapter/session_number descending
         sessions = sorted(sessions, key=lambda s: s.get('chapter') or 0, reverse=True)
-
         return jsonify({'sessions': sessions}), 200
+        
     except Exception as e:
-        return jsonify({'error': f'Error fetching sessions: {str(e)}', 'traceback': traceback.format_exc()}), 500
-
-
+        logger.exception(f"Error fetching sessions: {str(e)}")
+        return jsonify({'error': f'Error fetching sessions: {str(e)}'}), 500
+    
+    
 @app.route('/api/students', methods=['GET'])
 def get_all_students():
     """Return aggregated student list across all parents (for admin)"""
