@@ -77,15 +77,12 @@
           {{ lang() === 'en' ? 'SELECT STUDENT' : 'اختر الطالب' }}
         </label>
         <div class="select-container">
-          <!-- <select
-            id="student-select"
-            (change)="onStudentChange($event)" 
-            class="student-select"
-          >
+          <select id="student-select" class="student-select" [(ngModel)]="selectedStudentId"
+            (ngModelChange)="onStudentChange($event)">
             <option *ngFor="let student of students()" [value]="student.id">
               {{ student.name }}
             </option>
-          </select> -->
+          </select>
           <lucide-angular [img]="ChevronDown" class="select-arrow"></lucide-angular>
         </div>
       </div>

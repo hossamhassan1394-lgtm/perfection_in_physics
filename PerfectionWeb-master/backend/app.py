@@ -47,8 +47,8 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Allowed groups
-ALLOWED_GROUPS = ['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3']
+# Allowed groups (added 'online' option)
+ALLOWED_GROUPS = ['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3', 'online']
 
 # Allowed session numbers
 ALLOWED_SESSIONS = list(range(1, 9))  # 1 to 8
@@ -140,8 +140,9 @@ def normalize_timestamp(value):
 
 def format_start_time_arabic(value):
     """Format a datetime-like value into DD/MM/YYYY HH:MM:SS plus Arabic AM/PM marker (ص for AM, م for PM)."""
-    if not value:
-        return ''
+    # If value is missing/empty, show explicit placeholder for frontend
+    if value is None or (isinstance(value, str) and not str(value).strip()):
+        return 'No start time'
     try:
         if isinstance(value, datetime):
             dt = value
@@ -152,11 +153,13 @@ def format_start_time_arabic(value):
         arabic_marker = 'ص' if dt.hour < 12 else 'م'
         return f"{date_part} {arabic_marker}"
     except Exception:
-        # If parsing fails, return original string
+        # If parsing fails, prefer returning the original non-empty string if available,
+        # otherwise return the explicit placeholder so frontend shows "No start time".
         try:
-            return str(value)
+            s = str(value)
+            return s if s.strip() else 'No start time'
         except:
-            return ''
+            return 'No start time'
 
 def parse_general_exam_sheet(file_path):
     """

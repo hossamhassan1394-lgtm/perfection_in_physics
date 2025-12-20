@@ -40,7 +40,7 @@ export class ExcelUploadComponent {
   examName: string = '';
 
   // Available options
-  groups = signal<string[]>(['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3']);
+  groups = signal<string[]>(['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3', 'online']);
   sessions = signal<number[]>([1, 2, 3, 4, 5, 6, 7, 8]);
 
   // Upload state

@@ -55,7 +55,24 @@ export class StudentService {
 
     const params = new HttpParams().set('phone_number', user.identifier);
     return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/parent/students`, { params }).pipe(
-      map(resp => resp.students || []),
+      map(resp => {
+        const students = resp.students || [];
+        // Deduplicate students by `id` where possible; fallback to `name+student_no`.
+        const seen = new Map<string, boolean>();
+        const unique: Student[] = [];
+        for (const s of students) {
+          const keyParts: string[] = [];
+          if (s.id) keyParts.push(String(s.id));
+          if (s.name) keyParts.push(String(s.name).trim());
+          if ((s as any).student_no) keyParts.push(String((s as any).student_no).trim());
+          const key = keyParts.length ? keyParts.join('||') : JSON.stringify(s);
+          if (!seen.has(key)) {
+            seen.set(key, true);
+            unique.push(s);
+          }
+        }
+        return unique;
+      }),
       catchError(() => of([]))
     );
   }

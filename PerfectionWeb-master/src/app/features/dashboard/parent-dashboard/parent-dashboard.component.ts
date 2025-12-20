@@ -89,6 +89,7 @@ export class ParentDashboardComponent implements OnInit {
   // Component state
   students = signal<Student[]>([]);
   selectedStudent = signal<Student | null>(null);
+  selectedStudentId = signal<string | null>(null);
   sessions = signal<Session[]>([]);
   // Settings modal / change password
   showSettings = signal<boolean>(false);
@@ -134,14 +135,27 @@ export class ParentDashboardComponent implements OnInit {
       next: (students) => {
         this.students.set(students);
         if (students.length > 0) {
-          this.selectedStudent.set(students[0]);
-          this.loadSessions(students[0].id);
+          // default to first student
+          const first = students[0];
+          this.selectedStudent.set(first);
+          this.selectedStudentId.set(first.id);
+          this.loadSessions(first.id);
         }
       },
       error: (error) => {
         console.error('Error loading students:', error);
       }
     });
+  }
+
+  onStudentChange(studentIdOrEvent: any): void {
+    // ngModel will pass the selected id string
+    const id = typeof studentIdOrEvent === 'string' ? studentIdOrEvent : String(studentIdOrEvent);
+    const student = this.students().find(s => s.id === id);
+    if (student) {
+      this.selectedStudent.set(student);
+      this.loadSessions(student.id);
+    }
   }
 
   loadSessions(studentId: string): void {
