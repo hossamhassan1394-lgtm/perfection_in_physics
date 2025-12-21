@@ -644,6 +644,26 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                         db_data['start_time'] = normalized_start if normalized_start else record.get('start_time')
                     except Exception:
                         db_data['start_time'] = record.get('start_time')
+
+                # Derive month from finish_time or start_time if available
+                try:
+                    month_val = None
+                    if db_data.get('finish_time'):
+                        try:
+                            dt = date_parser.parse(str(db_data.get('finish_time')))
+                            month_val = dt.month
+                        except Exception:
+                            month_val = None
+                    if month_val is None and db_data.get('start_time'):
+                        try:
+                            dt = date_parser.parse(str(db_data.get('start_time')))
+                            month_val = dt.month
+                        except Exception:
+                            month_val = None
+                    if month_val is not None:
+                        db_data['month'] = int(month_val)
+                except Exception:
+                    pass
                 
                 if record.get('homework_status') is not None:
                     db_data['homework_status'] = int(record.get('homework_status'))
@@ -1000,7 +1020,8 @@ def get_parent_students():
             quizzes_avg = round((v['quiz_sum'] / v['quiz_count']), 2) if v['quiz_count'] > 0 else 0
 
             students.append({
-                'id': v['parent_no'],  # Use parent_no as stable ID
+                # Use the first known student_id as the student id; fall back to parent_no
+                'id': (list(v['ids'])[0] if v['ids'] else v['parent_no']),
                 'name': v['name'],
                 'grade': v.get('grade', ''),
                 'attendance': attendance_pct,
@@ -1022,8 +1043,22 @@ def get_parent_sessions():
         return jsonify({'error': 'phone_number query parameter required'}), 400
     phone = normalize_phone(phone)
 
+    # Optional filters
+    student_id = request.args.get('student_id')
+    month_param = request.args.get('month')
+
     try:
         query = supabase.table('session_records').select('*').eq('parent_no', phone)
+        if student_id:
+            query = query.eq('student_id', student_id)
+        if month_param:
+            try:
+                month_int = int(month_param)
+                query = query.eq('month', month_int)
+            except Exception:
+                # ignore invalid month values and continue without month filtering
+                pass
+
         result = query.execute()
         records = result.data or []
 

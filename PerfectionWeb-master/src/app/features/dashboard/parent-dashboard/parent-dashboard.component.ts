@@ -109,6 +109,7 @@ export class ParentDashboardComponent implements OnInit {
   selectedStudent = signal<UniqueStudent | null>(null);
   selectedStudentCombinedId = signal<string | null>(null);
   sessions = signal<Session[]>([]);
+  selectedMonth = signal<number | null>(null);
 
   // Loading and error states
   isLoadingStudents = signal(true);
@@ -213,12 +214,12 @@ export class ParentDashboardComponent implements OnInit {
     }
   }
 
-  loadSessionsForStudent(student: UniqueStudent): void {
+  loadSessionsForStudent(student: UniqueStudent, month?: number | null): void {
     console.log(`📚 Loading sessions for ${student.name} (Parent: ${student.parentNumber})`);
 
     this.isLoadingSessions.set(true);
 
-    this.studentService.getSessionsForStudent(student.ids[0]).subscribe({
+    this.studentService.getSessionsForStudent(student.ids[0], month ?? undefined).subscribe({
       next: (sessions) => {
         console.log(`📚 Loaded ${sessions.length} sessions for ${student.name}`);
 
@@ -281,6 +282,14 @@ export class ParentDashboardComponent implements OnInit {
         this.sessions.set([]);
       }
     });
+  }
+
+  applyMonthFilter(): void {
+    const student = this.selectedStudent();
+    const month = this.selectedMonth();
+    if (student) {
+      this.loadSessionsForStudent(student, month);
+    }
   }
 
   // Helper methods for data state checking
