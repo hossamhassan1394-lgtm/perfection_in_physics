@@ -17,7 +17,14 @@ from collections import deque
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for Angular frontend
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["*"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})  # Enable CORS for Angular frontend
 
 # Logging configuration
 LOG_FILE = os.path.join(os.path.dirname(__file__), 'uploads.log')
