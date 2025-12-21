@@ -42,6 +42,7 @@ export class AdminDashboardComponent implements OnInit {
 
   // Component state
   allStudents = signal<Student[]>([]);
+  selectedMonth = signal<number | null>(null);
   uploadErrors = signal<Array<{ timestamp: string; level: string; message: string }>>([]);
 
   // Computed statistics
@@ -89,8 +90,8 @@ export class AdminDashboardComponent implements OnInit {
     this.loadUploadErrors();
   }
 
-  loadAllStudents(): void {
-    this.studentService.getAllStudents().subscribe({
+  loadAllStudents(month?: number | null): void {
+    this.studentService.getAllStudents(month ?? undefined).subscribe({
       next: (students) => {
         this.allStudents.set(students);
       },
@@ -98,6 +99,10 @@ export class AdminDashboardComponent implements OnInit {
         console.error('Error loading students:', error);
       }
     });
+  }
+
+  applyAdminMonthFilter(): void {
+    this.loadAllStudents(this.selectedMonth());
   }
 
   getAttendanceColor(attendance: number): string {

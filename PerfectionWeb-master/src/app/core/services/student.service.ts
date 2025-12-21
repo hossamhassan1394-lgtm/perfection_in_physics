@@ -79,10 +79,14 @@ export class StudentService {
   }
 
   /**
-   * Get all students (for admin)
+   * Get all students (for admin). Accepts optional `month` to filter records.
    */
-  getAllStudents(): Observable<Student[]> {
-    return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/students`).pipe(
+  getAllStudents(month?: number): Observable<Student[]> {
+    let params = new HttpParams();
+    if (month !== undefined && month !== null && !isNaN(Number(month))) {
+      params = params.set('month', String(month));
+    }
+    return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/students`, { params }).pipe(
       map(resp => resp.students || []),
       catchError(() => of(MOCK_STUDENTS))
     );
@@ -113,6 +117,12 @@ export class StudentService {
     if (month !== undefined && month !== null && !isNaN(Number(month))) {
       params = params.set('month', String(month));
     }
+    // Debug: log the request that's about to be sent
+    try {
+      // eslint-disable-next-line no-console
+      console.log('getSessionsForStudent: GET', `${environment.apiUrl}/parent/sessions`, params.toString());
+    } catch (e) { }
+
     return this.http.get<{ sessions: any[] }>(`${environment.apiUrl}/parent/sessions`, { params }).pipe(
       map(resp => resp.sessions || []),
       catchError(() => of([]))

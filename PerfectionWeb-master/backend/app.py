@@ -1139,7 +1139,17 @@ def get_parent_sessions():
 def get_all_students():
     """Return aggregated student list across all parents (for admin)"""
     try:
-        result = supabase.table('session_records').select('*').execute()
+        # Allow optional month filtering for admin analytics
+        month_param = request.args.get('month')
+        query = supabase.table('session_records').select('*')
+        if month_param:
+            try:
+                month_int = int(month_param)
+                query = query.eq('month', month_int)
+            except Exception:
+                # ignore invalid month parameter and fetch all
+                pass
+        result = query.execute()
         records = result.data or []
 
         students_map = {}

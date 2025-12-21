@@ -44,6 +44,18 @@
         <p class="text-white/70">Manage all students and view analytics</p>
       </div>
 
+      <!-- Month Filter for Admin -->
+      <div class="mb-6 flex items-center gap-3">
+        <label class="text-white/70">{{ lang() === 'en' ? 'Month' : 'الشهر' }}</label>
+        <select [ngModel]="selectedMonth()" (ngModelChange)="selectedMonth.set($event)"
+          class="px-3 py-2 rounded bg-white/5 text-white">
+          <option [ngValue]="null">{{ lang() === 'en' ? 'All months' : 'كل الأشهر' }}</option>
+          <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ lang() === 'en' ? ('Month ' + m) : ('الشهر ' + m) }}</option>
+        </select>
+        <button class="px-3 py-2 bg-indigo-600 text-white rounded" (click)="applyAdminMonthFilter()">{{ lang() === 'en' ? 'Filter' : 'تصفية' }}</button>
+        <button class="px-3 py-2 bg-white/10 text-white rounded" (click)="(selectedMonth.set(null)); applyAdminMonthFilter()">{{ lang() === 'en' ? 'All' : 'الكل' }}</button>
+      </div>
+
       <!-- Stats Overview -->
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
 
