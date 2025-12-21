@@ -561,20 +561,42 @@ export class ParentDashboardComponent implements OnInit {
       if (isNaN(d.getTime())) {
         const parsed = Date.parse(value);
         if (isNaN(parsed)) return value;
-        return new Date(parsed).toLocaleString('en-US', {
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-        });
+        const parsedDate = new Date(parsed);
+        return this.formatDateWithDay(parsedDate);
       }
-      return d.toLocaleString('en-US', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-      });
+      return this.formatDateWithDay(d);
     } catch (e) {
       return value;
     }
   }
 
+  private formatDateWithDay(date: Date): string {
+    const currentLang = this.lang();
+    
+    // Get day name in both languages
+    const dayNamesEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    
+    // Use UTC to avoid timezone shifts
+const dayIndex = date.getDay();
+    const dayName = currentLang === 'en' ? dayNamesEn[dayIndex] : dayNamesAr[dayIndex];
+    
+    // Format the date using UTC to ensure consistency
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    const dateStr = `${month}/${day}/${year}`;
+    
+    // Format the time
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    // Return formatted string with day name on first line, date and time on second
+    return `${dayName}\n${dateStr} ${timeStr}`;
+  }
   onCurrentPasswordChange(value: any): void {
     this.currentPassword.set(String(value || ''));
   }
@@ -593,4 +615,9 @@ export class ParentDashboardComponent implements OnInit {
     document.documentElement.lang = next;
     document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
   }
+
+  
+  
+
+
 }
