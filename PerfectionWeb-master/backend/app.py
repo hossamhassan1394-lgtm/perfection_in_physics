@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
@@ -1473,6 +1473,14 @@ def get_upload_log():
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({'error': 'Log file not found', 'lines': []}), 404
+
+        with open(LOG_FILE, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+            last_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+            return jsonify({'lines': last_lines, 'total': len(all_lines)}), 200
+    except Exception as e:
+        logger.exception(f"Error reading log file: {str(e)}")
+        return jsonify({'error': f'Error reading log file: {str(e)}'}), 500
 
 
 
