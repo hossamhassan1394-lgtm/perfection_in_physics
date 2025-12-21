@@ -171,11 +171,12 @@ export class ParentDashboardComponent implements OnInit {
 
         // Backend returns students already grouped by parent_no + name
         const uniqueStudentsList: UniqueStudent[] = students.map((student: Student) => {
+          const sid = String(student.id || '');
           return {
-            parentNumber: student.id,
+            parentNumber: (student as any).parent_no || sid,
             name: student.name,
-            combinedId: `${student.id}_${student.name}`,
-            ids: [student.id],
+            combinedId: `${sid}_${student.name}`,
+            ids: [sid],
             grade: student.grade,
             sessions: []
           };

@@ -9,6 +9,7 @@ export interface Student {
   id: string;
   name: string;
   grade: string;
+  parent_no?: string;
   attendance: number;
   payments: {
     paid: number;

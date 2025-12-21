@@ -1022,6 +1022,7 @@ def get_parent_students():
             students.append({
                 # Use the first known student_id as the student id; fall back to parent_no
                 'id': (list(v['ids'])[0] if v['ids'] else v['parent_no']),
+                'parent_no': v['parent_no'],
                 'name': v['name'],
                 'grade': v.get('grade', ''),
                 'attendance': attendance_pct,
