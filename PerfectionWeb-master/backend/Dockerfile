@@ -4,16 +4,10 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for numpy/pandas binary wheels and PostgreSQL client
+# Install minimal system dependencies (PostgreSQL client only)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    gfortran \
-    libopenblas-dev \
-    liblapack-dev \
-    libatlas-base-dev \
-    libpq-dev \
+    libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip, setuptools, wheel to latest versions

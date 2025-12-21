@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
@@ -17,7 +17,14 @@ from collections import deque
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for Angular frontend
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["*"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})  # Enable CORS for Angular frontend
 
 # Logging configuration
 LOG_FILE = os.path.join(os.path.dirname(__file__), 'uploads.log')
@@ -42,10 +49,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in .env file")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Initialize supabase as None; will fail gracefully if not set
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info("Supabase client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase: {str(e)}")
+        supabase = None
+else:
+    logger.warning("SUPABASE_URL or SUPABASE_KEY not set - database operations will fail")
 
 # Allowed groups (added 'online' option)
 ALLOWED_GROUPS = ['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3', 'online']
@@ -188,78 +202,77 @@ def format_start_time_arabic(value):
 def parse_general_exam_sheet(file_path):
     """
     Parse general exam Excel sheet
-    Columns: id, name, .Parent No, shamel (a, p), Q
+    Expected columns: id, name, .Parent No, a, p, Q
     """
     try:
         # Try reading with header=0 first
-        df = pd.read_excel(file_path, header=0)
+        try:
+            df = pd.read_excel(file_path, header=0)
+        except AttributeError as ae:
+            # Handle openpyxl ReadOnlyWorksheet lacking some attributes
+            if 'defined_names' in str(ae) or 'ReadOnlyWorksheet' in str(ae):
+                from openpyxl import load_workbook
+                wb = load_workbook(file_path, data_only=True)
+                ws = wb.active
+                data = list(ws.values)
+                if not data:
+                    raise
+                header = [str(h).strip() if h is not None else '' for h in data[0]]
+                rows = data[1:]
+                df = pd.DataFrame(rows, columns=header)
+            else:
+                raise
         
-        # Clean column names (remove spaces, handle special characters)
+        # Clean column names
         df.columns = df.columns.astype(str).str.strip()
         
-        # Find the actual column names (they might have variations)
+        logger.info(f"General exam columns found: {list(df.columns)}")
+        
+        # Map columns by exact name or position
+        col_list = list(df.columns)
         id_col = None
         name_col = None
         parent_col = None
-        shamel_a_col = None
-        shamel_p_col = None
+        a_col = None
+        p_col = None
         q_col = None
         
-        # First pass: find main columns
-        for col in df.columns:
+        # Try to find columns by name first (case-insensitive, stripped)
+        for col in col_list:
             col_lower = str(col).lower().strip()
-            if 'id' in col_lower and id_col is None and col_lower != 'parent':
+            
+            if col_lower == 'id' and id_col is None:
                 id_col = col
-            elif 'name' in col_lower and name_col is None:
+            elif col_lower == 'name' and name_col is None:
                 name_col = col
             elif 'parent' in col_lower and parent_col is None:
                 parent_col = col
-            elif col_lower == 'q' or col_lower.strip() == 'q':
+            elif col_lower == 'a' and a_col is None:
+                a_col = col
+            elif col_lower == 'p' and p_col is None:
+                p_col = col
+            elif col_lower == 'q' and q_col is None:
                 q_col = col
         
-        # Second pass: find shamel columns (a and p)
-        # These might be separate columns or under a merged header
-        col_list = list(df.columns)
-        for i, col in enumerate(col_list):
-            col_lower = str(col).lower().strip()
-            # Check if this is column 'a' and might be under shamel
-            if (col_lower == 'a' or 'a' in col_lower) and shamel_a_col is None:
-                # Check previous column for 'shamel' or if it's in a typical position
-                if i > 0:
-                    prev_col = str(col_list[i-1]).lower()
-                    if 'shamel' in prev_col or 'parent' in prev_col:
-                        shamel_a_col = col
-                else:
-                    # If it's after parent column, likely shamel a
-                    if parent_col and col_list.index(col) > col_list.index(parent_col):
-                        shamel_a_col = col
-            
-            # Check if this is column 'p' and might be under shamel
-            if (col_lower == 'p' or col_lower.strip() == 'p') and shamel_p_col is None and col != shamel_a_col:
-                # Check if it's right after shamel_a_col or in typical position
-                if shamel_a_col:
-                    if col_list.index(col) == col_list.index(shamel_a_col) + 1:
-                        shamel_p_col = col
-                elif i > 0:
-                    prev_col = str(col_list[i-1]).lower()
-                    if 'shamel' in prev_col or 'a' in prev_col:
-                        shamel_p_col = col
+        # If not all found by name, try by position
+        # Standard order: id, name, parent, a, p, q
+        if not id_col and len(col_list) > 0:
+            id_col = col_list[0]
+        if not name_col and len(col_list) > 1:
+            name_col = col_list[1]
+        if not parent_col and len(col_list) > 2:
+            parent_col = col_list[2]
+        if not a_col and len(col_list) > 3:
+            a_col = col_list[3]
+        if not p_col and len(col_list) > 4:
+            p_col = col_list[4]
+        if not q_col and len(col_list) > 5:
+            q_col = col_list[5]
         
-        # Fallback: if shamel columns not found, try by position after parent
-        if parent_col:
-            parent_idx = col_list.index(parent_col)
-            # Usually shamel a and p come right after parent
-            if parent_idx + 1 < len(col_list) and shamel_a_col is None:
-                potential_a = col_list[parent_idx + 1]
-                if 'a' in str(potential_a).lower() or str(potential_a).strip() == 'a':
-                    shamel_a_col = potential_a
-            if parent_idx + 2 < len(col_list) and shamel_p_col is None:
-                potential_p = col_list[parent_idx + 2]
-                if 'p' in str(potential_p).lower() or str(potential_p).strip() == 'p':
-                    shamel_p_col = potential_p
+        logger.info(f"Mapped columns - id:{id_col}, name:{name_col}, parent:{parent_col}, a:{a_col}, p:{p_col}, q:{q_col}")
         
-        if not all([id_col, name_col, parent_col, q_col]):
-            raise ValueError(f"Required columns not found in general exam sheet. Found: {list(df.columns)}")
+        if not all([id_col, name_col, parent_col]):
+            raise ValueError(f"Required columns (id, name, parent_no) not found. Columns: {list(df.columns)}")
         
         records = []
         for idx, row in df.iterrows():
@@ -268,45 +281,74 @@ def parse_general_exam_sheet(file_path):
                 continue
             
             try:
-                # Handle parent_no conversion
+                student_id = str(row[id_col]).strip()
+                student_name = str(row[name_col]).strip() if not pd.isna(row[name_col]) else ''
+                
+                # Handle parent_no
                 parent_no_val = row[parent_col]
                 if pd.isna(parent_no_val):
                     parent_no_str = ''
                 else:
-                    # Try to convert to int, but handle if it's already a string
                     try:
                         parent_no_str = str(int(float(parent_no_val)))
                     except Exception:
                         parent_no_str = str(parent_no_val).strip()
                 
-                student_name = str(row[name_col]).strip() if not pd.isna(row[name_col]) else ''
-                student_id = str(row[id_col]).strip()
-                
                 # Validate required fields
                 if not parent_no_str:
-                    logger.warning("Row %d: Missing or empty parent_no for student '%s' (id='%s')", idx+1, student_name, student_id)
+                    logger.warning(f"Row {idx+1}: Missing parent_no for student '{student_name}' (id='{student_id}')")
                     continue
                 if not student_name:
-                    logger.warning("Row %d: Missing or empty student name for id='%s'", idx+1, student_id)
+                    logger.warning(f"Row {idx+1}: Missing student name for id='{student_id}'")
                     continue
+                
+                # Extract optional fields
+                attendance = 0
+                if a_col:
+                    a_val = row[a_col]
+                    if not pd.isna(a_val):
+                        try:
+                            attendance = 1 if (int(a_val) == 1 or str(a_val).strip() == '1') else 0
+                        except (ValueError, TypeError):
+                            attendance = 0
+                
+                payment = 0
+                if p_col:
+                    p_val = row[p_col]
+                    if not pd.isna(p_val):
+                        try:
+                            payment = 1 if (int(p_val) == 1 or str(p_val).strip() == '1') else 0
+                        except (ValueError, TypeError):
+                            payment = 0
+                
+                quiz_mark = None
+                if q_col:
+                    q_val = row[q_col]
+                    if not pd.isna(q_val):
+                        try:
+                            quiz_mark = float(q_val)
+                        except (ValueError, TypeError):
+                            quiz_mark = None
                 
                 record = {
                     'id': student_id,
                     'name': student_name,
                     'parent_no': parent_no_str,
-                    'attendance': 1 if shamel_a_col and not pd.isna(row[shamel_a_col]) and (row[shamel_a_col] == 1 or str(row[shamel_a_col]).strip() == '1') else 0,
-                    'payment': 1 if shamel_p_col and not pd.isna(row[shamel_p_col]) and (row[shamel_p_col] == 1 or str(row[shamel_p_col]).strip() == '1') else 0,
-                    'quiz_mark': float(row[q_col]) if not pd.isna(row[q_col]) else None
+                    'attendance': attendance,
+                    'payment': payment,
+                    'quiz_mark': quiz_mark
                 }
                 records.append(record)
+                logger.info(f"Parsed row {idx+1}: {student_id} - {student_name}")
+                
             except Exception as e:
-                # Skip rows with errors but continue processing
-                logger.warning("Error processing row %d (id='%s'): %s", idx+1, row.get(id_col, 'unknown'), str(e))
+                logger.warning(f"Error processing row {idx+1}: {str(e)}")
                 continue
         
-        logger.info("Parsed %d valid records from general exam sheet", len(records))
+        logger.info(f"Parsed {len(records)} valid records from general exam sheet")
         return records
     except Exception as e:
+        logger.error(f"Error parsing general exam sheet: {str(e)}")
         raise Exception(f"Error parsing general exam sheet: {str(e)}")
 
 def parse_normal_lecture_sheet(file_path):
@@ -315,7 +357,25 @@ def parse_normal_lecture_sheet(file_path):
     Columns: id, name, pokin, student no., Parent No., a, p, Q, time, s1
     """
     try:
-        df = pd.read_excel(file_path, header=0)
+        try:
+            df = pd.read_excel(file_path, header=0)
+        except AttributeError as ae:
+            # Workaround for openpyxl returning ReadOnlyWorksheet without
+            # `defined_names` when pandas/openpyxl open the file in
+            # read-only mode. Fall back to loading with openpyxl directly
+            # and build a DataFrame from the sheet values.
+            if 'defined_names' in str(ae):
+                from openpyxl import load_workbook
+                wb = load_workbook(file_path, data_only=True)
+                ws = wb.active
+                data = list(ws.values)
+                if not data:
+                    raise
+                header = [str(h).strip() if h is not None else '' for h in data[0]]
+                rows = data[1:]
+                df = pd.DataFrame(rows, columns=header)
+            else:
+                raise
         
         # Clean column names
         df.columns = df.columns.astype(str).str.strip()
@@ -615,50 +675,85 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                         except Exception:
                             error_msg = str(insert_error)
 
-                        # Record detailed error for response
-                        errors.append(f"Row {student_id}: {error_msg} | payload: {db_data}")
-
-                        # Check for duplicate key constraint or unique violation and attempt updates
-                        if '23505' in str(error_msg) or 'duplicate' in str(error_msg).lower() or 'unique' in str(error_msg).lower():
+                        # If the error is caused by a missing column in the schema cache
+                        # (e.g. admin_quiz_mark), try removing that column and retrying.
+                        if isinstance(error_msg, str) and ("Could not find the 'admin_quiz_mark'" in error_msg or 'PGRST204' in str(insert_error)):
                             try:
-                                # Attempt targeted update by student_id
-                                update_res = supabase.table('session_records').update(db_data).eq('student_id', student_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                                reduced_payload = dict(db_data)
+                                if 'admin_quiz_mark' in reduced_payload:
+                                    reduced_payload.pop('admin_quiz_mark')
+                                # attempt insert without the offending column
+                                retry_res = supabase.table('session_records').insert(reduced_payload).execute()
+                                retry_error = getattr(retry_res, 'error', None)
+                                if not retry_error:
+                                    updated_count += 1
+                                    logger.info(f"Inserted record for %s after removing admin_quiz_mark (session %s, group %s)", student_id, session_number, group)
+                                    # remove last recorded error if present
+                                    if errors:
+                                        errors.pop()
+                                    continue
+                                else:
+                                    logger.error("Retry insert error for %s: %s -- reduced payload: %s", student_id, retry_error, reduced_payload)
+                            except Exception as retry_exc:
+                                logger.exception("Retry insert exception for %s: %s", student_id, str(retry_exc))
+
+                        # If duplicate key (unique constraint) - try updating the existing row instead of failing
+                        if isinstance(error_msg, str) and ('23505' in error_msg or 'duplicate' in error_msg.lower() or 'unique' in error_msg.lower() or 'session_records_student_name_session_number_parent_no_key' in error_msg):
+                            try:
+                                # Preferred: update by the desired unique key (student_name, parent_no)
+                                update_res = supabase.table('session_records').update(db_data).eq('student_name', student_name).eq('parent_no', parent_no).execute()
                                 update_error = getattr(update_res, 'error', None)
                                 if not update_error:
                                     updated_count += 1
-                                    logger.info(f"Updated duplicate record for {student_id}")
-                                    # remove last error since we resolved it
+                                    logger.info("Updated existing record by student_name+parent_no for %s", student_id)
                                     if errors:
                                         errors.pop()
+                                    continue
+                            except Exception:
+                                logger.exception("Exception while attempting update by student_name+parent_no for %s", student_id)
+
+                            # Fallback: try targeted update by student_id + session/group
+                            try:
+                                fut_update = supabase.table('session_records').update(db_data).eq('student_id', student_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                                fut_err = getattr(fut_update, 'error', None)
+                                if not fut_err:
+                                    updated_count += 1
+                                    logger.info("Updated duplicate record for %s via fallback keys", student_id)
+                                    if errors:
+                                        errors.pop()
+                                    continue
                                 else:
-                                    ue_msg = update_error.get('message') if isinstance(update_error, dict) else str(update_error)
-                                    logger.error(f"Update returned error for {student_id}: {ue_msg} -- payload: {db_data}")
-                                    # Try fallback name-based resolution
+                                    logger.error("Fallback update also failed for %s: %s", student_id, fut_err)
+                            except Exception:
+                                logger.exception("Fallback update exception for %s", student_id)
+
+                        # Record detailed error for response
+                        errors.append(f"Row {student_id}: {error_msg} | payload: {db_data}")
+
+                        # As a last attempt, try to find an existing record by name/session/group and update student_id if it differs
+                        try:
+                            existing = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).limit(1).execute()
+                            if getattr(existing, 'data', None) and len(existing.data) > 0:
+                                old_id = existing.data[0].get('student_id')
+                                if old_id and old_id != student_id:
+                                    logger.info("Found same person '%s' with old ID '%s', updating to new ID '%s'", student_name, old_id, student_id)
+                                    update_data = dict(db_data)
+                                    update_data['student_id'] = student_id
                                     try:
-                                        logger.info(f"Attempting to find existing record by name '%s' for session %s, group %s", student_name, session_number, group)
-                                        existing = supabase.table('session_records').select('student_id').eq('student_name', student_name).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).limit(1).execute()
-                                        if getattr(existing, 'data', None) and len(existing.data) > 0:
-                                            old_id = existing.data[0].get('student_id')
-                                            if old_id and old_id != student_id:
-                                                logger.info("Found same person '%s' with old ID '%s', updating to new ID '%s'", student_name, old_id, student_id)
-                                                update_data = dict(db_data)
-                                                update_data['student_id'] = student_id
-                                                update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
-                                                update_name_error = getattr(update_by_name, 'error', None)
-                                                if not update_name_error:
-                                                    updated_count += 1
-                                                    logger.info("Updated student ID from '%s' to '%s' for '%s'", old_id, student_id, student_name)
-                                                    # remove last error since we resolved it
-                                                    if errors:
-                                                        errors.pop()
-                                                else:
-                                                    name_err = update_name_error.get('message') if isinstance(update_name_error, dict) else str(update_name_error)
-                                                    logger.error("Name-based update failed for %s: %s -- payload: %s", student_name, name_err, db_data)
-                                    except Exception as name_err:
-                                        logger.exception("Name-based lookup/update exception for %s: %s", student_name, str(name_err))
-                            except Exception as update_err:
-                                logger.exception("Update exception for %s: %s -- payload: %s", student_id, str(update_err), db_data)
-                                errors.append(f"Row {student_id}: Update exception: {str(update_err)} | payload: {db_data}")
+                                        update_by_name = supabase.table('session_records').update(update_data).eq('student_id', old_id).eq('session_number', session_number).eq('group_name', group).eq('is_general_exam', is_general_exam).execute()
+                                        update_name_error = getattr(update_by_name, 'error', None)
+                                        if not update_name_error:
+                                            updated_count += 1
+                                            logger.info("Updated student ID from '%s' to '%s' for '%s'", old_id, student_id, student_name)
+                                            if errors:
+                                                errors.pop()
+                                        else:
+                                            name_err = update_name_error.get('message') if isinstance(update_name_error, dict) else str(update_name_error)
+                                            logger.error("Name-based update failed for %s: %s -- payload: %s", student_name, name_err, db_data)
+                                    except Exception:
+                                        logger.exception("Name-based update exception for %s", student_name)
+                        except Exception as name_err:
+                            logger.exception("Name-based lookup/update exception for %s: %s", student_name, str(name_err))
                 except Exception as e:
                     # Exception from Supabase client call
                     err_text = str(e)
@@ -674,6 +769,11 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
     except Exception as e:
         logger.exception(f"✗ Critical error in update_database: {str(e)}")
         raise Exception(f"Error updating database: {str(e)}")
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint - returns API info"""
+    return jsonify({'message': 'Perfection Physics Backend API', 'version': '1.0', 'status': 'running'}), 200
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -698,6 +798,10 @@ def upload_excel():
     - has_time: true/false (show finish time in parent dashboard)
     """
     try:
+        # Check if Supabase is initialized
+        if not supabase:
+            return jsonify({'error': 'Database not configured. Please contact administrator.'}), 500
+        
         # Validate required fields
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
@@ -949,6 +1053,8 @@ def get_parent_sessions():
                 'name': r.get('lecture_name') or r.get('exam_name') or f"Session {r.get('session_number')}",
                 'lectureName': r.get('lecture_name') or r.get('exam_name'),
                 'date': r.get('finish_time') or '',
+                # include created_at so frontend can order by upload time
+                'created_at': r.get('created_at') or r.get('createdAt') or r.get('created at'),
                 'is_general_exam': r.get('is_general_exam', False),
                 'isGeneralExam': r.get('is_general_exam', False),
                 'startTime': formatted_start,
@@ -979,7 +1085,13 @@ def get_parent_sessions():
             
             sessions.append(session)
 
-        sessions = sorted(sessions, key=lambda s: s.get('chapter') or 0, reverse=True)
+        # Prefer ordering by upload/creation time (newest first). If created_at
+        # is not present, fall back to ordering by chapter/session number.
+        sessions = sorted(
+            sessions,
+            key=lambda s: ((s.get('created_at') or ''), (s.get('chapter') or 0)),
+            reverse=True
+        )
         return jsonify({'sessions': sessions}), 200
         
     except Exception as e:
@@ -1295,7 +1407,9 @@ def admin_login():
             admin = result.data[0]
             print(f"✅ Admin found: {admin}")
             
-            if admin.get('password_hash') == password:
+            # Compare plain password with stored password_hash (both stored as plain text in DB)
+            stored_password = admin.get('password_hash', '')
+            if stored_password == password:
                 print("✅ Password match - Login successful!")
                 return jsonify({
                     'success': True,
@@ -1306,7 +1420,7 @@ def admin_login():
                 }), 200
             else:
                 print(f"❌ Password mismatch!")
-                print(f"   Stored: '{admin.get('password_hash')}'")
+                print(f"   Stored: '{stored_password}'")
                 print(f"   Provided: '{password}'")
                 return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
         else:
@@ -1405,6 +1519,134 @@ def get_upload_log():
         if not os.path.exists(LOG_FILE):
             return jsonify({'error': 'Log file not found', 'lines': []}), 404
 
+        with open(LOG_FILE, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+            last_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+            return jsonify({'lines': last_lines, 'total': len(all_lines)}), 200
+    except Exception as e:
+        logger.exception(f"Error reading log file: {str(e)}")
+        return jsonify({'error': f'Error reading log file: {str(e)}'}), 500
+
+
+@app.route('/api/admin/upload-errors', methods=['GET'])
+def get_admin_upload_errors():
+    """Return structured upload errors for admin dashboard."""
+    try:
+        limit = int(request.args.get('limit', 50))
+    except:
+        limit = 50
+
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({'errors': [], 'total': 0}), 200
+
+        errors = []
+        with open(LOG_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Parse lines that contain errors
+                if 'ERROR' in line or 'error' in line or 'Error' in line:
+                    # Extract timestamp and message
+                    try:
+                        # Format: 2025-12-21 01:25:26,123 - ERROR - message
+                        parts = line.split(' - ', 2)
+                        if len(parts) >= 3:
+                            timestamp = parts[0]
+                            level = parts[1]
+                            message = parts[2]
+                            errors.append({
+                                'timestamp': timestamp,
+                                'level': level,
+                                'message': message
+                            })
+                        else:
+                            errors.append({
+                                'timestamp': '',
+                                'level': 'ERROR',
+                                'message': line
+                            })
+                    except Exception as e:
+                        errors.append({
+                            'timestamp': '',
+                            'level': 'ERROR',
+                            'message': line
+                        })
+        
+        # Return most recent errors first
+        errors_recent = errors[-limit:] if len(errors) > limit else errors
+        errors_recent.reverse()
+        
+        return jsonify({
+            'errors': errors_recent,
+            'total': len(errors),
+            'limit': limit
+        }), 200
+    except Exception as e:
+        logger.exception(f"Error reading upload errors: {str(e)}")
+        return jsonify({'error': f'Error reading upload errors: {str(e)}', 'errors': []}), 500
+
+
+
+@app.route('/api/export-upload-errors', methods=['GET'])
+def export_upload_errors():
+    """Scan recent upload logs for error lines and export them to CSV.
+    Returns JSON with `file` set to the relative path of the exported CSV.
+    """
+    try:
+        # Ensure exports directory
+        exports_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'exports')
+        os.makedirs(exports_dir, exist_ok=True)
+
+        # Read last part of the log to avoid huge reads
+        with open(LOG_FILE, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+
+        # Keep last 5000 lines for scanning
+        recent = all_lines[-5000:]
+
+        # Patterns to capture: Missing parent_no, Insert error, Row ...: messages
+        import re
+        patterns = [r"Missing parent_no", r"Insert error", r"Row .*?:"]
+        matches = []
+        for line in recent:
+            if any(re.search(p, line) for p in patterns):
+                # Try to split timestamp and message
+                parts = line.strip().split(' - ', 2)
+                if len(parts) >= 3:
+                    ts, level, msg = parts[0], parts[1], parts[2]
+                elif len(parts) == 2:
+                    ts, level = parts[0], parts[1]
+                    msg = ''
+                else:
+                    ts = ''
+                    level = ''
+                    msg = line.strip()
+                matches.append({'timestamp': ts, 'level': level, 'message': msg})
+
+        if not matches:
+            return jsonify({'error': 'No recent upload errors found'}), 404
+
+        # Write CSV
+        import csv
+        timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+        csv_name = f'upload_errors_{timestamp}.csv'
+        csv_path = os.path.join(exports_dir, csv_name)
+        with open(csv_path, 'w', encoding='utf-8', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=['timestamp', 'level', 'message'])
+            writer.writeheader()
+            for m in matches:
+                writer.writerow(m)
+
+        # Return relative path for download by front-end (served statically under uploads/)
+        rel_path = f'uploads/exports/{csv_name}'
+        logger.info('Exported upload errors to %s', csv_path)
+        return jsonify({'file': rel_path, 'count': len(matches)}), 200
+    except Exception as e:
+        logger.exception('Error exporting upload errors: %s', str(e))
+        return jsonify({'error': str(e)}), 500
         with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f:
             last = list(deque(f, maxlen=lines))
 

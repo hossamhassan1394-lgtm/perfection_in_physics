@@ -42,6 +42,7 @@ export class AdminDashboardComponent implements OnInit {
 
   // Component state
   allStudents = signal<Student[]>([]);
+  uploadErrors = signal<Array<{ timestamp: string; level: string; message: string }>>([]);
 
   // Computed statistics
   totalStudents = computed(() => this.allStudents().length);
@@ -85,6 +86,7 @@ export class AdminDashboardComponent implements OnInit {
     }
 
     this.loadAllStudents();
+    this.loadUploadErrors();
   }
 
   loadAllStudents(): void {
@@ -188,5 +190,18 @@ export class AdminDashboardComponent implements OnInit {
     } catch (err) {
       console.error('Error downloading log:', err);
     }
+  }
+
+  loadUploadErrors(): void {
+    fetch('/api/admin/upload-errors?limit=50')
+      .then(resp => resp.json())
+      .then(data => {
+        if (data.errors && Array.isArray(data.errors)) {
+          this.uploadErrors.set(data.errors);
+        }
+      })
+      .catch(err => {
+        console.error('Error loading upload errors:', err);
+      });
   }
 }
