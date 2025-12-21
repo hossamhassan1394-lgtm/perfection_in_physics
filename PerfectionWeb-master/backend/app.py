@@ -1474,6 +1474,65 @@ def get_upload_log():
         if not os.path.exists(LOG_FILE):
             return jsonify({'error': 'Log file not found', 'lines': []}), 404
 
+
+
+@app.route('/api/export-upload-errors', methods=['GET'])
+def export_upload_errors():
+    """Scan recent upload logs for error lines and export them to CSV.
+    Returns JSON with `file` set to the relative path of the exported CSV.
+    """
+    try:
+        # Ensure exports directory
+        exports_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'exports')
+        os.makedirs(exports_dir, exist_ok=True)
+
+        # Read last part of the log to avoid huge reads
+        with open(LOG_FILE, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+
+        # Keep last 5000 lines for scanning
+        recent = all_lines[-5000:]
+
+        # Patterns to capture: Missing parent_no, Insert error, Row ...: messages
+        import re
+        patterns = [r"Missing parent_no", r"Insert error", r"Row .*?:"]
+        matches = []
+        for line in recent:
+            if any(re.search(p, line) for p in patterns):
+                # Try to split timestamp and message
+                parts = line.strip().split(' - ', 2)
+                if len(parts) >= 3:
+                    ts, level, msg = parts[0], parts[1], parts[2]
+                elif len(parts) == 2:
+                    ts, level = parts[0], parts[1]
+                    msg = ''
+                else:
+                    ts = ''
+                    level = ''
+                    msg = line.strip()
+                matches.append({'timestamp': ts, 'level': level, 'message': msg})
+
+        if not matches:
+            return jsonify({'error': 'No recent upload errors found'}), 404
+
+        # Write CSV
+        import csv
+        timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+        csv_name = f'upload_errors_{timestamp}.csv'
+        csv_path = os.path.join(exports_dir, csv_name)
+        with open(csv_path, 'w', encoding='utf-8', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=['timestamp', 'level', 'message'])
+            writer.writeheader()
+            for m in matches:
+                writer.writerow(m)
+
+        # Return relative path for download by front-end (served statically under uploads/)
+        rel_path = f'uploads/exports/{csv_name}'
+        logger.info('Exported upload errors to %s', csv_path)
+        return jsonify({'file': rel_path, 'count': len(matches)}), 200
+    except Exception as e:
+        logger.exception('Error exporting upload errors: %s', str(e))
+        return jsonify({'error': str(e)}), 500
         with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f:
             last = list(deque(f, maxlen=lines))
 
