@@ -1,8 +1,11 @@
 {
-  "rewrites": [
-    {
-      "source": "/((?!.*\\.).*)",
-      "destination": "/index.html"
-    }
-  ]
+    "version": 2,
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist/prefectionweb",
+    "rewrites": [
+        {
+            "source": "/((?!.*\\.).*)",
+            "destination": "/index.html"
+        }
+    ]
 }
