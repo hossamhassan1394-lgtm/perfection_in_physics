@@ -219,6 +219,9 @@ def parse_general_exam_sheet(file_path):
         # Clean column names (remove spaces, handle special characters)
         df.columns = df.columns.astype(str).str.strip()
         
+        # Log all column names found for debugging
+        logger.info(f"General exam columns found: {list(df.columns)}")
+        
         # Find the actual column names (they might have variations)
         id_col = None
         name_col = None
@@ -226,11 +229,12 @@ def parse_general_exam_sheet(file_path):
         shamel_a_col = None
         shamel_p_col = None
         q_col = None
+        timeo_col = None  # Optional timeo column
         
         # First pass: find main columns
         for col in df.columns:
             col_lower = str(col).lower().strip()
-            if 'id' in col_lower and id_col is None and col_lower != 'parent':
+            if 'id' in col_lower and id_col is None and 'parent' not in col_lower:
                 id_col = col
             elif 'name' in col_lower and name_col is None:
                 name_col = col
@@ -238,47 +242,52 @@ def parse_general_exam_sheet(file_path):
                 parent_col = col
             elif col_lower == 'q' or col_lower.strip() == 'q':
                 q_col = col
+            elif 'timeo' in col_lower or col_lower == 'time':
+                timeo_col = col
         
-        # Second pass: find shamel columns (a and p)
-        # These might be separate columns or under a merged header
+        # Second pass: find shamel columns (a and p) and other columns by position
         col_list = list(df.columns)
-        for i, col in enumerate(col_list):
-            col_lower = str(col).lower().strip()
-            # Check if this is column 'a' and might be under shamel
-            if (col_lower == 'a' or 'a' in col_lower) and shamel_a_col is None:
-                # Check previous column for 'shamel' or if it's in a typical position
-                if i > 0:
-                    prev_col = str(col_list[i-1]).lower()
-                    if 'shamel' in prev_col or 'parent' in prev_col:
-                        shamel_a_col = col
-                else:
-                    # If it's after parent column, likely shamel a
-                    if parent_col and col_list.index(col) > col_list.index(parent_col):
-                        shamel_a_col = col
-            
-            # Check if this is column 'p' and might be under shamel
-            if (col_lower == 'p' or col_lower.strip() == 'p') and shamel_p_col is None and col != shamel_a_col:
-                # Check if it's right after shamel_a_col or in typical position
-                if shamel_a_col:
-                    if col_list.index(col) == col_list.index(shamel_a_col) + 1:
-                        shamel_p_col = col
-                elif i > 0:
-                    prev_col = str(col_list[i-1]).lower()
-                    if 'shamel' in prev_col or 'a' in prev_col:
-                        shamel_p_col = col
+        col_positions = {col: i for i, col in enumerate(col_list)}
         
-        # Fallback: if shamel columns not found, try by position after parent
-        if parent_col:
-            parent_idx = col_list.index(parent_col)
-            # Usually shamel a and p come right after parent
-            if parent_idx + 1 < len(col_list) and shamel_a_col is None:
+        if parent_col and parent_col in col_positions:
+            parent_idx = col_positions[parent_col]
+            # Usually shamel a and p come right after parent (next 2 columns)
+            if parent_idx + 1 < len(col_list):
                 potential_a = col_list[parent_idx + 1]
-                if 'a' in str(potential_a).lower() or str(potential_a).strip() == 'a':
+                col_a_lower = str(potential_a).lower().strip()
+                if col_a_lower == 'a' or col_a_lower.endswith('.a') or col_a_lower.endswith(' a') or 'a' in col_a_lower:
                     shamel_a_col = potential_a
-            if parent_idx + 2 < len(col_list) and shamel_p_col is None:
+            
+            if parent_idx + 2 < len(col_list):
                 potential_p = col_list[parent_idx + 2]
-                if 'p' in str(potential_p).lower() or str(potential_p).strip() == 'p':
+                col_p_lower = str(potential_p).lower().strip()
+                if col_p_lower == 'p' or col_p_lower.endswith('.p') or col_p_lower.endswith(' p') or col_p_lower == 'p' or 'p' in col_p_lower:
                     shamel_p_col = potential_p
+        
+        # If not found by position, try by column name matching
+        if not shamel_a_col:
+            for col in col_list:
+                col_lower = str(col).lower().strip()
+                if col_lower == 'a' or col_lower.endswith('.a') or col_lower.endswith(' a'):
+                    shamel_a_col = col
+                    break
+        
+        if not shamel_p_col:
+            for col in col_list:
+                col_lower = str(col).lower().strip()
+                if col_lower == 'p' or col_lower.endswith('.p') or col_lower.endswith(' p'):
+                    shamel_p_col = col
+                    break
+        
+        # If q_col not found, try by position (usually 2nd to last column before timeo)
+        if not q_col:
+            for col in col_list:
+                col_lower = str(col).lower().strip()
+                if col_lower == 'q' or col_lower.strip() == 'q':
+                    q_col = col
+                    break
+        
+        logger.info(f"Mapped columns - id:{id_col}, name:{name_col}, parent:{parent_col}, shamel_a:{shamel_a_col}, shamel_p:{shamel_p_col}, q:{q_col}, timeo:{timeo_col}")
         
         if not all([id_col, name_col, parent_col, q_col]):
             raise ValueError(f"Required columns not found in general exam sheet. Found: {list(df.columns)}")
