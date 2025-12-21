@@ -27,6 +27,10 @@
           <lucide-angular [img]="Settings" class="btn-icon"></lucide-angular>
         </button>
 
+        <button class="filter-toggle-btn" title="Filter" (click)="toggleFilterPanel()" style="margin-left:8px;">
+          <lucide-angular [img]="Filter" class="btn-icon"></lucide-angular>
+        </button>
+
         <button class="lang-btn" title="Toggle language" (click)="toggleLanguage()">
           {{ lang() === 'en' ? 'ع/AR' : 'EN' }}
         </button>
@@ -87,8 +91,9 @@
         </div>
       </div>
 
-      <!-- Month Filter -->
-      <div class="month-filter-wrapper" style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+      <!-- Month Filter (toggled from header) -->
+      <div *ngIf="showFilterPanel()" class="month-filter-wrapper"
+        style="margin-top:12px;display:flex;gap:8px;align-items:center;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.95);box-shadow:0 6px 18px rgba(0,0,0,0.06);">
         <label class="selector-label">{{ lang() === 'en' ? 'Filter Month' : 'تصفية بالشهر' }}</label>
         <select class="month-select" [(ngModel)]="selectedMonth">
           <option [ngValue]="null">{{ lang() === 'en' ? 'All months' : 'كل الأشهر' }}</option>
@@ -98,6 +103,8 @@
         <button type="button" class="btn btn-primary" (click)="applyMonthFilter()"
           style="display:inline-block;min-width:84px;padding:8px 12px;">{{ lang() === 'en' ? 'Filter' : 'تصفية'
           }}</button>
+        <button type="button" class="btn btn-secondary" (click)="toggleFilterPanel()"
+          style="margin-left:8px;padding:8px 12px;">{{ lang() === 'en' ? 'Close' : 'إغلاق' }}</button>
       </div>
 
       <!-- Loading State for Students -->
