@@ -1,5 +1,6 @@
 import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import {
@@ -21,6 +22,7 @@ import { ExcelUploadComponent } from '../excel-upload/excel-upload.component';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     LucideAngularModule,
     ExcelUploadComponent
     // TopNavComponent
@@ -42,7 +44,7 @@ export class AdminDashboardComponent implements OnInit {
 
   // Component state
   allStudents = signal<Student[]>([]);
-  // selectedMonth = signal<number | null>(null);
+  selectedMonth = signal<number | null>(null);
   uploadErrors = signal<Array<{ timestamp: string; level: string; message: string }>>([]);
 
   // Computed statistics
@@ -90,20 +92,23 @@ export class AdminDashboardComponent implements OnInit {
     this.loadUploadErrors();
   }
 
-  // loadAllStudents(month?: number | null): void {
-  //   this.studentService.getAllStudents(month ?? undefined).subscribe({
-  //     next: (students) => {
-  //       this.allStudents.set(students);
-  //     },
-  //     error: (error) => {
-  //       console.error('Error loading students:', error);
-  //     }
-  //   });
-  // }
+  loadAllStudents(): void {
+    this.studentService.getAllStudents().subscribe({
+      next: (students) => {
+        this.allStudents.set(students);
+      },
+      error: (error) => {
+        console.error('Error loading students:', error);
+        this.allStudents.set([]);
+      }
+    });
+  }
 
-  // applyAdminMonthFilter(): void {
-  //   this.loadAllStudents(this.selectedMonth());
-  // }
+  applyAdminMonthFilter(): void {
+    // Current backend doesn't accept month param here — reload all students.
+    // If server-side filtering is later supported, pass `this.selectedMonth()` to the API.
+    this.loadAllStudents();
+  }
 
   getAttendanceColor(attendance: number): string {
     if (attendance >= 90) return 'bg-green-500/20 text-green-300';
