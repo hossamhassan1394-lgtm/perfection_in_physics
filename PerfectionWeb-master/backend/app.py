@@ -999,8 +999,9 @@ def get_parent_months():
                     except Exception:
                         pass
 
-                # If month is missing or invalid, try deriving from finish_time, start_time, or created_at
-                for dkey in ('finish_time', 'start_time', 'created_at'):
+                # If month is missing or invalid, try deriving from finish_time or start_time
+                # (do NOT derive from created_at — upload timestamp can cause unrelated months to appear)
+                for dkey in ('finish_time', 'start_time'):
                     val = r.get(dkey)
                     if val:
                         try:
