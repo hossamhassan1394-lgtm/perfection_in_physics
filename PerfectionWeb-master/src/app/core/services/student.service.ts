@@ -91,7 +91,7 @@ export class StudentService {
     );
   }
 
-  getSessionsForStudent(combinedId: string): Observable<any[]> {
+  getSessionsForStudent(combinedId: string, month?: number | null): Observable<any[]> {
     const user = this.authService.getCurrentUser();
     if (!user || !user.identifier) return of([]);
     
@@ -99,12 +99,35 @@ export class StudentService {
     const parentNo = parts[0];
     const studentName = parts.slice(1).join('_');
     
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('phone_number', user.identifier)
       .set('student_name', studentName);
+    if (month !== undefined && month !== null) {
+      params = params.set('month', String(month));
+    }
     
     return this.http.get<{ sessions: any[] }>(`${environment.apiUrl}/parent/sessions`, { params }).pipe(
       map(resp => resp.sessions || []),
+      catchError(() => of([]))
+    );
+  }
+
+  /**
+   * Get list of available months (1..12) for a parent's student sessions
+   */
+  getAvailableMonthsForStudent(combinedId: string): Observable<number[]> {
+    const user = this.authService.getCurrentUser();
+    if (!user || !user.identifier) return of([]);
+
+    const parts = combinedId.split('_');
+    const studentName = parts.slice(1).join('_');
+
+    const params = new HttpParams()
+      .set('phone_number', user.identifier)
+      .set('student_name', studentName);
+
+    return this.http.get<{ months: number[] }>(`${environment.apiUrl}/parent/sessions/months`, { params }).pipe(
+      map(resp => resp.months || []),
       catchError(() => of([]))
     );
   }

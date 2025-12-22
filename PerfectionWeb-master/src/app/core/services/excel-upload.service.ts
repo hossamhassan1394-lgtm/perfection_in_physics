@@ -50,7 +50,8 @@ export class ExcelUploadService {
     examName?: string,
     hasExamGrade: boolean = true,
     hasPayment: boolean = true,
-    hasTime: boolean = true
+    hasTime: boolean = true,
+    month?: number | null
   ): Observable<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
@@ -78,6 +79,9 @@ export class ExcelUploadService {
     }
     if (examName) {
       formData.append('exam_name', examName);
+    }
+    if (month !== undefined && month !== null) {
+      formData.append('month', String(month));
     }
 
     return this.http.post<UploadResponse>(`${this.apiUrl}/upload-excel`, formData, {

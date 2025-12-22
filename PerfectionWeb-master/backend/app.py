@@ -550,7 +550,7 @@ def create_or_update_parent(parent_no, student_name=None):
         # Silently fail parent creation - don't block the main upload
         logger.warning(f"Could not create parent account for {parent_no}: {str(e)}")
 
-def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam, lecture_name='', exam_name='', has_exam_grade=True, has_payment=True, has_time=True):
+def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam, lecture_name='', exam_name='', has_exam_grade=True, has_payment=True, has_time=True, month_param=None):
     """
     Update database with parsed records using UPSERT logic
     Works with existing constraint: UNIQUE (student_name, session_number, parent_no)
@@ -645,23 +645,36 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                     except Exception:
                         db_data['start_time'] = record.get('start_time')
 
-                # Derive month from finish_time or start_time if available
+                # Month: prefer explicit admin-provided month_param, otherwise derive from timestamps
                 try:
-                    month_val = None
-                    if db_data.get('finish_time'):
+                    provided_month = None
+                    if month_param:
                         try:
-                            dt = date_parser.parse(str(db_data.get('finish_time')))
-                            month_val = dt.month
+                            m_int = int(month_param)
+                            if 1 <= m_int <= 12:
+                                provided_month = m_int
                         except Exception:
-                            month_val = None
-                    if month_val is None and db_data.get('start_time'):
-                        try:
-                            dt = date_parser.parse(str(db_data.get('start_time')))
-                            month_val = dt.month
-                        except Exception:
-                            month_val = None
-                    if month_val is not None:
-                        db_data['month'] = int(month_val)
+                            provided_month = None
+
+                    if provided_month is not None:
+                        db_data['month'] = provided_month
+                    else:
+                        # Derive month from finish_time or start_time if available
+                        month_val = None
+                        if db_data.get('finish_time'):
+                            try:
+                                dt = date_parser.parse(str(db_data.get('finish_time')))
+                                month_val = dt.month
+                            except Exception:
+                                month_val = None
+                        if month_val is None and db_data.get('start_time'):
+                            try:
+                                dt = date_parser.parse(str(db_data.get('start_time')))
+                                month_val = dt.month
+                            except Exception:
+                                month_val = None
+                        if month_val is not None:
+                            db_data['month'] = int(month_val)
                 except Exception:
                     pass
                 
@@ -835,6 +848,8 @@ def upload_excel():
         
         # Get form data
         session_number = request.form.get('session_number')
+        # Optional month provided by admin (1..12)
+        month_param = request.form.get('month')
         quiz_mark = request.form.get('quiz_mark')
         finish_time = request.form.get('finish_time')
         group = request.form.get('group')
@@ -894,17 +909,18 @@ def upload_excel():
 
             # Update database
             updated_count, errors = update_database(
-                records, 
-                session_number, 
-                quiz_mark, 
-                finish_time, 
-                group, 
+                records,
+                session_number,
+                quiz_mark,
+                finish_time,
+                group,
                 is_general_exam,
                 lecture_name,
                 exam_name,
                 has_exam_grade,
                 has_payment,
-                has_time
+                has_time,
+                month_param
             )
             
             # Clean up uploaded file
@@ -952,6 +968,29 @@ def get_groups():
 def get_sessions():
     """Get list of available session numbers"""
     return jsonify({'sessions': ALLOWED_SESSIONS}), 200
+
+
+@app.route('/api/parent/sessions/months', methods=['GET'])
+def get_parent_months():
+    """Return available months for a parent's student sessions (distinct months present)
+    Query params: phone_number (required), student_name (optional)
+    """
+    phone = request.args.get('phone_number')
+    student_name = request.args.get('student_name')
+    if not phone:
+        return jsonify({'error': 'phone_number query parameter required'}), 400
+    phone = normalize_phone(phone)
+    try:
+        query = supabase.table('session_records').select('month').eq('parent_no', phone)
+        if student_name:
+            query = query.eq('student_name', student_name)
+        res = query.execute()
+        records = res.data or []
+        months = sorted(list({int(r.get('month')) for r in records if r.get('month') is not None}))
+        return jsonify({'months': months}), 200
+    except Exception as e:
+        logger.exception(f"Error fetching parent months: {str(e)}")
+        return jsonify({'error': f'Error fetching months: {str(e)}'}), 500
 
 
 @app.route('/api/parent/students', methods=['GET'])
@@ -1055,10 +1094,17 @@ def get_parent_sessions():
 
     try:
         query = supabase.table('session_records').select('*').eq('parent_no', phone)
-        
+
         # ✅ ADD THIS FILTER
         if student_name:
             query = query.eq('student_name', student_name)
+        # Optional month filter
+        if month_param:
+            try:
+                month_int = int(month_param)
+                query = query.eq('month', month_int)
+            except Exception:
+                pass
             
         result = query.execute()
         records = result.data or []

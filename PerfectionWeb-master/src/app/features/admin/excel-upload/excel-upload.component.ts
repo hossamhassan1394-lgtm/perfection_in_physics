@@ -36,6 +36,8 @@ export class ExcelUploadComponent {
   hasPayment: boolean = true;
   hasTime: boolean = true;
   examName: string = '';
+  // Admin-selected month (1..12) - default to current month
+  selectedMonth: number | null = (new Date()).getMonth() + 1;
 
   // Available options
   groups = signal<string[]>(['cam1', 'maimi', 'cam2', 'west', 'station1', 'station2', 'station3', 'online']);
@@ -128,7 +130,8 @@ export class ExcelUploadComponent {
         this.examName.trim() || undefined,
         this.hasExamGrade,
         this.hasPayment,
-        this.hasTime
+        this.hasTime,
+        this.selectedMonth
       )
       .subscribe({
         next: (response) => {

@@ -286,8 +286,15 @@
             <select class="month-select" [ngModel]="selectedMonth()" (ngModelChange)="selectedMonth.set($event)"
               style="min-width:140px;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.08);">
               <option [ngValue]="null">{{ lang() === 'en' ? 'All months' : 'كل الأشهر' }}</option>
-              <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [ngValue]="m">{{ lang() === 'en' ? ('Month ' + m) :
-                ('الشهر ' + m) }}</option>
+              @if (availableMonths().length > 0) {
+                @for (m of availableMonths(); track m) {
+                <option [ngValue]="m">{{ lang() === 'en' ? ('Month ' + m) : ('الشهر ' + m) }}</option>
+                }
+              } @else {
+                @for (m of [1,2,3,4,5,6,7,8,9,10,11,12]; track m) {
+                <option [ngValue]="m">{{ lang() === 'en' ? ('Month ' + m) : ('الشهر ' + m) }}</option>
+                }
+              }
             </select>
             <button type="button" class="btn btn-primary" (click)="applyMonthFilter()"
               style="padding:8px 12px;border-radius:8px;">{{ lang() === 'en' ? 'Filter' : 'تصفية' }}</button>

@@ -110,6 +110,7 @@ export class ParentDashboardComponent implements OnInit {
   selectedStudentCombinedId = signal<string | null>(null);
   sessions = signal<Session[]>([]);
   selectedMonth = signal<number | null>(null);
+  availableMonths = signal<number[]>([]);
 
   // Loading and error states
   isLoadingStudents = signal(true);
@@ -191,6 +192,7 @@ export class ParentDashboardComponent implements OnInit {
           // Add small delay to ensure DOM is ready
           setTimeout(() => {
             this.loadSessionsForStudent(first);
+            this.loadAvailableMonthsForStudent(first);
           }, 100);
         } else {
           // No students found - clear everything
@@ -217,13 +219,32 @@ export class ParentDashboardComponent implements OnInit {
     if (student) {
       this.selectedStudent.set(student);
       this.loadSessionsForStudent(student);
+      this.loadAvailableMonthsForStudent(student);
     }
+  }
+
+  loadAvailableMonthsForStudent(student: UniqueStudent): void {
+    this.availableMonths.set([]);
+    const combined = student.combinedId;
+    this.studentService.getAvailableMonthsForStudent(combined).subscribe({
+      next: (months) => {
+        if (months && months.length > 0) {
+          this.availableMonths.set(months);
+        } else {
+          // if backend returns no months, keep full months list as fallback
+          this.availableMonths.set([1,2,3,4,5,6,7,8,9,10,11,12]);
+        }
+      },
+      error: () => {
+        this.availableMonths.set([1,2,3,4,5,6,7,8,9,10,11,12]);
+      }
+    });
   }
 
   loadSessionsForStudent(student: UniqueStudent, month?: number | null): void {
     this.isLoadingSessions.set(true);
 
-    this.studentService.getSessionsForStudent(student.combinedId).subscribe({
+    this.studentService.getSessionsForStudent(student.combinedId, month).subscribe({
       next: (sessions) => {
         // Sort sessions by upload/created time (most recent first).
         const sortedSessions = (sessions as Session[]).slice().sort((a: any, b: any) => {
@@ -240,26 +261,11 @@ export class ParentDashboardComponent implements OnInit {
           return getTimestamp(b) - getTimestamp(a);
         });
 
-        // If a month filter was provided, filter by month (month is 1..12)
-        let effectiveSessions = sortedSessions;
-        if (month != null) {
-          const m = Number(month);
-          if (!isNaN(m)) {
-            effectiveSessions = sortedSessions.filter(s => {
-              const dateStr = (s as any).date || (s as any).start_time || (s as any).startTime;
-              if (!dateStr) return false;
-              const d = new Date(String(dateStr));
-              if (isNaN(d.getTime())) return false;
-              return (d.getMonth() + 1) === m;
-            });
-          }
-        }
-
-        this.sessions.set(effectiveSessions);
+        this.sessions.set(sortedSessions);
         this.isLoadingSessions.set(false);
 
-        // Calculate session statistics using effectiveSessions list
-        const regularSessions = effectiveSessions.filter(s => {
+        // Calculate session statistics using returned sessions list
+        const regularSessions = (sortedSessions as any[]).filter((s: any) => {
           const sessionAny = s as any;
           const isGeneralExam =
             sessionAny.is_general_exam === true ||
@@ -270,8 +276,8 @@ export class ParentDashboardComponent implements OnInit {
         });
 
         const total = regularSessions.length;
-        const attended = regularSessions.filter(s => s.attendance === 'attended').length;
-        const missed = regularSessions.filter(s => s.attendance === 'missed').length;
+        const attended = regularSessions.filter((s: any) => s.attendance === 'attended').length;
+        const missed = regularSessions.filter((s: any) => s.attendance === 'missed').length;
 
         this.sessionCount.set(total);
         this.attendedCount.set(attended);
