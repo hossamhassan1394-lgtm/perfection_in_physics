@@ -232,9 +232,10 @@ export class ParentDashboardComponent implements OnInit {
           // ensure months are sorted ascending
           months.sort((a,b)=>a-b);
           this.availableMonths.set(months);
-          // default selected month to first available
-          this.selectedMonth.set(months[0]);
-          this.loadSessionsForStudent(student, months[0]);
+          // default selected month to latest available (most recent)
+          const latest = months[months.length - 1];
+          this.selectedMonth.set(latest);
+          this.loadSessionsForStudent(student, latest);
         } else {
           // no months available — clear selection and load all sessions
           this.availableMonths.set([]);
@@ -248,6 +249,15 @@ export class ParentDashboardComponent implements OnInit {
         this.loadSessionsForStudent(student);
       }
     });
+  }
+
+  onMonthChange(month: any): void {
+    const m = month === null || month === '' ? null : Number(month);
+    this.selectedMonth.set(m);
+    const student = this.selectedStudent();
+    if (student) {
+      this.loadSessionsForStudent(student, m);
+    }
   }
 
   loadSessionsForStudent(student: UniqueStudent, month?: number | null): void {

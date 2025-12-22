@@ -283,7 +283,7 @@
           <!-- Session Filter (always visible above sessions) -->
           <div class="session-filter" style="margin-top:12px;display:flex;gap:8px;align-items:center;">
             <label class="selector-label" style="margin-right:6px;">{{ lang() === 'en' ? 'Month' : 'الشهر' }}</label>
-            <select class="month-select" [ngModel]="selectedMonth()" (ngModelChange)="selectedMonth.set($event)"
+            <select class="month-select" [ngModel]="selectedMonth()" (ngModelChange)="onMonthChange($event)"
               [disabled]="availableMonths().length === 0 || isLoadingSessions()"
               style="min-width:140px;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.08);">
               @if (availableMonths().length > 0) {
@@ -294,10 +294,6 @@
                 <option disabled>{{ lang() === 'en' ? 'No months available' : 'لا توجد أشهر' }}</option>
               }
             </select>
-            <button type="button" class="btn btn-primary" (click)="applyMonthFilter()"
-              style="padding:8px 12px;border-radius:8px;">{{ lang() === 'en' ? 'Filter' : 'تصفية' }}</button>
-            <button type="button" class="btn btn-secondary" (click)="(selectedMonth.set(null)); applyMonthFilter()"
-              style="padding:8px 12px;border-radius:8px;">{{ lang() === 'en' ? 'All' : 'الكل' }}</button>
           </div>
 
           <!-- Loading State for Sessions -->
