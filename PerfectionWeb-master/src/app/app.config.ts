@@ -6,10 +6,7 @@ import { routes } from './app.routes';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(
-      routes,
-      withDebugTracing() // Enable router debugging - REMOVE in production!
-    ),
+    provideRouter(routes),
     provideHttpClient(withInterceptorsFromDi())
   ]
 };

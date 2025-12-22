@@ -1018,14 +1018,27 @@ def get_parent_students():
 def get_parent_sessions():
     """Return session records for a parent with proper boolean handling"""
     phone = request.args.get('phone_number')
+    student_name = request.args.get('student_name')  # ✅ ADD THIS LINE
+    
     if not phone:
         return jsonify({'error': 'phone_number query parameter required'}), 400
     phone = normalize_phone(phone)
 
     try:
         query = supabase.table('session_records').select('*').eq('parent_no', phone)
+        
+        # ✅ ADD THIS FILTER
+        if student_name:
+            query = query.eq('student_name', student_name)
+            
         result = query.execute()
         records = result.data or []
+        if student_name:
+            logger.info(f"Filtered sessions for parent {phone}, student {student_name}: {len(records)} sessions")
+        else:
+            logger.info(f"All sessions for parent {phone}: {len(records)} sessions")
+        
+        
 
         sessions = []
         for r in records:

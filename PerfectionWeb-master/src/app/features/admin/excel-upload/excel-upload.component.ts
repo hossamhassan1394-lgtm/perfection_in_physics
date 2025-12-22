@@ -23,20 +23,18 @@ export class ExcelUploadComponent {
   lang = signal<'en' | 'ar'>('en');
   // Form data
   selectedFile: File | null = null;
-  sessionNumber: number = 1; // lecture or exam session number (1–8)
+  sessionNumber: number = 1;
   quizMark: number | null = null;
   finishTime: string = '';
   selectedGroup: string = 'cam1';
   isGeneralExam: boolean = false;
 
   // Extra metadata
-  // For normal lectures
   lectureNumber: number | null = null;
   lectureName: string = '';
   hasExamGrade: boolean = true;
   hasPayment: boolean = true;
   hasTime: boolean = true;
-  // For general exams
   examName: string = '';
 
   // Available options
@@ -59,15 +57,14 @@ export class ExcelUploadComponent {
   }
 
   loadOptions(): void {
-    // Load groups and sessions from API
     this.excelUploadService.getGroups().subscribe({
       next: (groups) => this.groups.set(groups),
-      error: (err) => console.error('Error loading groups:', err)
+      error: () => {}
     });
 
     this.excelUploadService.getSessions().subscribe({
       next: (sessions) => this.sessions.set(sessions),
-      error: (err) => console.error('Error loading sessions:', err)
+      error: () => {}
     });
   }
 
@@ -85,25 +82,20 @@ export class ExcelUploadComponent {
       return;
     }
 
-    // Validation based on type
     if (this.isGeneralExam) {
       if (!this.examName.trim()) {
         this.uploadError.set('Please enter the exam name');
         return;
       }
-      // Quiz mark can be optional for exams; remove this check if you want it required
     } else {
-      // For normal lecture, lecture name is required
       if (!this.lectureName.trim()) {
         this.uploadError.set('Please enter the lecture name');
         return;
       }
-      // If admin enabled exam grade, require quizMark
       if (this.hasExamGrade && (this.quizMark === null || this.quizMark === undefined)) {
         this.uploadError.set('Please enter the quiz/exam mark for the lecture');
         return;
       }
-      // If admin enabled finish time, ensure it is provided
       if (this.hasTime && !this.finishTime) {
         this.uploadError.set('Please select the finish time');
         return;
@@ -118,7 +110,7 @@ export class ExcelUploadComponent {
     const finishTimeValue = this.finishTime
       ? new Date(this.finishTime).toISOString().slice(0, 19).replace('T', ' ')
       : null;
-    // For general exam marks, ensure integer value
+    
     if (this.isGeneralExam && this.quizMark !== null && this.quizMark !== undefined) {
       this.quizMark = Math.trunc(this.quizMark);
     }
@@ -140,48 +132,35 @@ export class ExcelUploadComponent {
       )
       .subscribe({
         next: (response) => {
-          console.log('✓ Upload response:', response);
           this.isUploading.set(false);
           this.uploadProgress.set(100);
           this.uploadResult.set(response);
 
-          // Show detailed errors if any
           if (response.errors && response.errors.length > 0) {
-            this.detailedErrors.set(response.errors.slice(0, 10)); // Show first 10 errors
+            this.detailedErrors.set(response.errors.slice(0, 10));
           }
 
-          // Treat upload as successful if at least one record was updated
           const updated = response.updated_count || 0;
           const total = response.total_records || 0;
           const errorCount = response.error_count || (response.errors ? response.errors.length : 0);
 
           if (updated > 0) {
-            // If more than half failed, surface a warning but keep uploaded records
             if (errorCount > Math.floor(total / 2)) {
               this.uploadError.set(`Partial upload: ${updated}/${total} succeeded, ${errorCount} failed`);
             } else {
               this.uploadError.set(null);
             }
-            // Reset form (we consider partial success acceptable)
             this.resetForm();
           } else {
-            // No records uploaded - prefer message, otherwise join returned errors if any
             const joinedErrors = response.errors && response.errors.length ? response.errors.slice(0, 10).join(' | ') : null;
             const msg = response.message || joinedErrors || 'No records were uploaded';
             this.uploadError.set(msg);
           }
         },
         error: (error) => {
-          console.error('✗ Upload error:', error);
           this.isUploading.set(false);
           const errorMessage = error.error?.error || error.error?.message || error.message || 'Upload failed';
           this.uploadError.set(errorMessage);
-          console.error('Upload error details:', {
-            status: error.status,
-            statusText: error.statusText,
-            message: error.message,
-            error: error.error
-          });
         }
       });
   }
@@ -196,7 +175,6 @@ export class ExcelUploadComponent {
     this.lectureNumber = null;
     this.examName = '';
     this.detailedErrors.set([]);
-    // Reset file input
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
@@ -215,12 +193,10 @@ export class ExcelUploadComponent {
     return null;
   }
 
-  // Go back to previous page
   goBack(): void {
     this.location.back();
   }
 
-  // Toggle language between English and Arabic
   toggleLanguage(): void {
     const newLang = this.lang() === 'en' ? 'ar' : 'en';
     this.lang.set(newLang);
@@ -228,12 +204,10 @@ export class ExcelUploadComponent {
     document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
   }
 
-  // Toggle showing full error list returned by backend
   toggleFullErrors(): void {
     this.showFullErrors.set(!this.showFullErrors());
   }
 
-  // Download full error log as a text file (useful for debugging failed rows)
   downloadErrors(): void {
     const res = this.uploadResult();
     if (!res || !res.errors || res.errors.length === 0) {
@@ -252,4 +226,3 @@ export class ExcelUploadComponent {
     window.URL.revokeObjectURL(url);
   }
 }
-

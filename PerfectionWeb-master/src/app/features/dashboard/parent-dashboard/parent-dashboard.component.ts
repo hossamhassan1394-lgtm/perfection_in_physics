@@ -122,8 +122,8 @@ export class ParentDashboardComponent implements OnInit {
   confirmPassword = signal('');
   settingsMessage = signal<string>('');
 
-  // Language / translations (simple)
-  lang = signal<'en' | 'ar'>('en');
+  // Language / translations - CHANGED DEFAULT TO ARABIC
+  lang = signal<'en' | 'ar'>('ar');
 
   constructor(
     private router: Router,
@@ -132,6 +132,9 @@ export class ParentDashboardComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    // Set Arabic as default on component initialization
+    this.setLanguage('ar');
+
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
       return;
@@ -150,14 +153,19 @@ export class ParentDashboardComponent implements OnInit {
     this.loadStudents();
   }
 
+  // Helper method to set language and update DOM
+  private setLanguage(language: 'en' | 'ar'): void {
+    this.lang.set(language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }
+
   loadStudents(): void {
     this.isLoadingStudents.set(true);
     this.hasError.set(false);
 
     this.studentService.getStudentsForParent().subscribe({
       next: (students) => {
-        console.log('📚 Raw students from backend:', students);
-
         // Backend returns students already grouped by parent_no + name
         const uniqueStudentsList: UniqueStudent[] = students.map((student: Student) => {
           return {
@@ -169,8 +177,6 @@ export class ParentDashboardComponent implements OnInit {
             sessions: []
           };
         });
-
-        console.log('✅ Unique students loaded:', uniqueStudentsList);
 
         this.uniqueStudents.set(uniqueStudentsList);
         this.isLoadingStudents.set(false);
@@ -193,7 +199,6 @@ export class ParentDashboardComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('Error loading students:', error);
         this.isLoadingStudents.set(false);
         this.hasError.set(true);
         this.sessions.set([]);
@@ -214,14 +219,10 @@ export class ParentDashboardComponent implements OnInit {
   }
 
   loadSessionsForStudent(student: UniqueStudent): void {
-    console.log(`📚 Loading sessions for ${student.name} (Parent: ${student.parentNumber})`);
-
     this.isLoadingSessions.set(true);
 
-    this.studentService.getSessionsForStudent(student.ids[0]).subscribe({
+    this.studentService.getSessionsForStudent(student.combinedId).subscribe({
       next: (sessions) => {
-        console.log(`📚 Loaded ${sessions.length} sessions for ${student.name}`);
-
         // Sort sessions by upload/created time (most recent first).
         const sortedSessions = (sessions as Session[]).slice().sort((a: any, b: any) => {
           const getTimestamp = (s: any) => {
@@ -241,39 +242,25 @@ export class ParentDashboardComponent implements OnInit {
         this.isLoadingSessions.set(false);
 
         // Calculate session statistics using sorted list
-        const total = sortedSessions.length;
-        const attended = sortedSessions.filter(s => s.attendance === 'attended').length;
-        const missed = sortedSessions.filter(s => s.attendance === 'missed').length;
+        const regularSessions = sortedSessions.filter(s => {
+          const sessionAny = s as any;
+          const isGeneralExam = 
+            sessionAny.is_general_exam === true ||
+            sessionAny.is_general_exam === 'true' ||
+            sessionAny.is_general_exam === 1 ||
+            sessionAny.isGeneralExam === true;
+          return !isGeneralExam; // Exclude general exams
+        });
+
+        const total = regularSessions.length;
+        const attended = regularSessions.filter(s => s.attendance === 'attended').length;
+        const missed = regularSessions.filter(s => s.attendance === 'missed').length;
 
         this.sessionCount.set(total);
         this.attendedCount.set(attended);
         this.missedCount.set(missed);
-
-        // Debug: Check for general exams that are attended
-        const attendedGeneralExams = sessions.filter((s: any) => {
-          const isGeneralExam = s.is_general_exam === true || s.isGeneralExam === true;
-          const isAttended = s.attendance === 'attended';
-          return isGeneralExam && isAttended;
-        });
-
-        console.log('🏆 Attended general exams found:', attendedGeneralExams);
-
-        // Log each session's details
-        sessions.forEach((s: any, index: number) => {
-          console.log(`Session ${index + 1}:`, {
-            id: s.id,
-            name: s.name,
-            is_general_exam: s.is_general_exam,
-            isGeneralExam: s.isGeneralExam,
-            attendance: s.attendance,
-            quizCorrect: s.quizCorrect,
-            adminQuizMark: s.adminQuizMark,
-            quizTotal: s.quizTotal
-          });
-        });
       },
       error: (err) => {
-        console.error('Error loading sessions:', err);
         this.isLoadingSessions.set(false);
         this.sessionCount.set(0);
         this.attendedCount.set(0);
@@ -293,12 +280,9 @@ export class ParentDashboardComponent implements OnInit {
   }
 
   refreshData(): void {
-    console.log('🔄 Refreshing data...');
     if (this.selectedStudent()) {
-      console.log('🔄 Reloading sessions for current student');
       this.loadSessionsForStudent(this.selectedStudent()!);
     } else {
-      console.log('🔄 Reloading all students');
       this.loadStudents();
     }
   }
@@ -323,7 +307,15 @@ export class ParentDashboardComponent implements OnInit {
     let totalQuestions = 0;
 
     sessions.forEach(session => {
-      if (session.attendance === 'attended') {
+      // Skip general exams
+      const sessionAny = session as any;
+      const isGeneralExam = 
+        sessionAny.is_general_exam === true ||
+        sessionAny.is_general_exam === 'true' ||
+        sessionAny.is_general_exam === 1 ||
+        sessionAny.isGeneralExam === true;
+      
+      if (session.attendance === 'attended' && !isGeneralExam) {
         totalCorrect += session.quizCorrect || 0;
         const totalForSession = session.adminQuizMark || session.quizTotal || 0;
         totalQuestions += totalForSession;
@@ -341,7 +333,15 @@ export class ParentDashboardComponent implements OnInit {
     let totalQuestions = 0;
 
     sessions.forEach(session => {
-      if (session.attendance === 'attended') {
+      // Skip general exams - must match getQuizPerformance logic
+      const sessionAny = session as any;
+      const isGeneralExam = 
+        sessionAny.is_general_exam === true ||
+        sessionAny.is_general_exam === 'true' ||
+        sessionAny.is_general_exam === 1 ||
+        sessionAny.isGeneralExam === true;
+      
+      if (session.attendance === 'attended' && !isGeneralExam) {
         totalCorrect += session.quizCorrect || 0;
         const totalForSession = session.adminQuizMark || session.quizTotal || 0;
         totalQuestions += totalForSession;
@@ -366,22 +366,16 @@ export class ParentDashboardComponent implements OnInit {
 
   onLogout(): void {
     try {
-      console.log('🔓 Parent logout initiated');
       this.authService.logout();
       this.router.navigate(['/login'], { replaceUrl: true }).then(success => {
-        if (success) {
-          console.log('✓ Navigated to login after logout');
-        } else {
-          console.error('✗ Router navigation to /login failed - falling back to full redirect');
-          try { window.location.replace('/login'); } catch (e) { console.error('Fallback redirect failed', e); }
+        if (!success) {
+          try { window.location.replace('/login'); } catch (e) { }
         }
-      }).catch(err => {
-        console.error('✗ Navigation error during logout:', err);
-        try { window.location.replace('/login'); } catch (e) { console.error('Fallback redirect failed', e); }
+      }).catch(() => {
+        try { window.location.replace('/login'); } catch (e) { }
       });
     } catch (e) {
-      console.error('✗ Error during logout:', e);
-      try { window.location.replace('/login'); } catch (err) { console.error('Fallback redirect failed', err); }
+      try { window.location.replace('/login'); } catch (err) { }
     }
   }
 
@@ -412,26 +406,25 @@ export class ParentDashboardComponent implements OnInit {
     const conf = this.confirmPassword();
 
     if (!cur || !nw || !conf) {
-      this.settingsMessage.set('Please fill all fields');
+      this.settingsMessage.set(this.lang() === 'en' ? 'Please fill all fields' : 'يرجى ملء جميع الحقول');
       return;
     }
     if (nw !== conf) {
-      this.settingsMessage.set('New password and confirmation do not match');
+      this.settingsMessage.set(this.lang() === 'en' ? 'New password and confirmation do not match' : 'كلمة المرور الجديدة والتأكيد غير متطابقين');
       return;
     }
 
     this.authService.changePassword(cur, nw).subscribe({
       next: (resp) => {
         if (resp.success) {
-          this.settingsMessage.set('Password changed successfully');
+          this.settingsMessage.set(this.lang() === 'en' ? 'Password changed successfully' : 'تم تغيير كلمة المرور بنجاح');
           setTimeout(() => this.closeSettings(), 1200);
         } else {
-          this.settingsMessage.set(resp.message || 'Failed to change password');
+          this.settingsMessage.set(resp.message || (this.lang() === 'en' ? 'Failed to change password' : 'فشل تغيير كلمة المرور'));
         }
       },
       error: (err) => {
-        this.settingsMessage.set('Failed to change password');
-        console.error('Change password error:', err);
+        this.settingsMessage.set(this.lang() === 'en' ? 'Failed to change password' : 'فشل تغيير كلمة المرور');
       }
     });
   }
@@ -464,7 +457,6 @@ export class ParentDashboardComponent implements OnInit {
   // Check if student has attended general exam data
   hasShamelData(): boolean {
     const sessions = this.sessions();
-    console.log('🔍 Checking for Shamel data. Total sessions:', sessions.length);
 
     const exam = sessions.find(s => {
       const sessionAny = s as any;
@@ -489,24 +481,8 @@ export class ParentDashboardComponent implements OnInit {
       const isGeneralExam = isMarkedAsGeneralExam || hasExamKeyword;
       const isAttended = s.attendance === 'attended';
 
-      console.log(`📋 Session ${s.id} (${s.name}):`, {
-        'is_general_exam': sessionAny.is_general_exam,
-        'name': s.name,
-        'hasExamKeyword': hasExamKeyword,
-        'attendance': s.attendance,
-        'isGeneralExam': isGeneralExam,
-        'isAttended': isAttended,
-        'QUALIFIES': isGeneralExam && isAttended
-      });
-
       return isGeneralExam && isAttended;
     });
-
-    if (exam) {
-      console.log('✅ Found qualifying attended general exam:', exam);
-    } else {
-      console.log('❌ No attended general exam found');
-    }
 
     return !!exam;
   }
@@ -542,16 +518,14 @@ export class ParentDashboardComponent implements OnInit {
     if (exam) {
       const total = exam.adminQuizMark || exam.quizTotal || 60;
       const score = exam.quizCorrect || 0;
-      console.log('📊 Shamel grade calculated:', { score, total, label: exam.name });
       return {
         score,
         total,
-        label: exam.name || exam.lectureName || 'General Exam'
+        label: exam.name || exam.lectureName || (this.lang() === 'en' ? 'General Exam' : 'امتحان عام')
       };
     }
 
-    console.log('⚠️ No attended Shamel data available, returning default');
-    return { score: 0, total: 60, label: 'No exam data' };
+    return { score: 0, total: 60, label: this.lang() === 'en' ? 'No exam data' : 'لا توجد بيانات امتحان' };
   }
 
   formatTimestamp(value?: string): string {
@@ -572,31 +546,34 @@ export class ParentDashboardComponent implements OnInit {
 
   private formatDateWithDay(date: Date): string {
     const currentLang = this.lang();
-    
-    // Get day name in both languages
+
     const dayNamesEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    
-    // Use UTC to avoid timezone shifts
-const dayIndex = date.getDay();
-    const dayName = currentLang === 'en' ? dayNamesEn[dayIndex] : dayNamesAr[dayIndex];
-    
-    // Format the date using UTC to ensure consistency
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const year = date.getUTCFullYear();
+
+    // ✅ ALL LOCAL — no UTC
+    const dayIndex = date.getDay();
+    const dayName = currentLang === 'en'
+      ? dayNamesEn[dayIndex]
+      : dayNamesAr[dayIndex];
+
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+
     const dateStr = `${month}/${day}/${year}`;
-    
-    // Format the time
-    const timeStr = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-    
-    // Return formatted string with day name on first line, date and time on second
+
+    const timeStr = date.toLocaleTimeString(
+      currentLang === 'ar' ? 'ar-EG' : 'en-US',
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }
+    );
+
     return `${dayName}\n${dateStr} ${timeStr}`;
   }
+
   onCurrentPasswordChange(value: any): void {
     this.currentPassword.set(String(value || ''));
   }
@@ -611,13 +588,6 @@ const dayIndex = date.getDay();
 
   toggleLanguage(): void {
     const next = this.lang() === 'en' ? 'ar' : 'en';
-    this.lang.set(next);
-    document.documentElement.lang = next;
-    document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
+    this.setLanguage(next);
   }
-
-  
-  
-
-
 }

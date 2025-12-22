@@ -868,7 +868,7 @@ $light-lavender: #F8F7FF;
     }
 
     .header-label {
-      font-size: 10px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 1.5px;
       color: $muted-purple;
@@ -886,7 +886,7 @@ $light-lavender: #F8F7FF;
       backdrop-filter: blur(10px);
       color: $deep-purple;
       border-radius: 10px;
-      font-size: 11px;
+      font-size: 15px;
       font-weight: 600;
       border: 1px solid rgba($deep-purple, 0.15);
       transition: all 0.3s ease;
@@ -964,56 +964,7 @@ $light-lavender: #F8F7FF;
     }
   }
 
-  .circular-progress {
-  width: 100px;
-  height: 100px;
-  position: relative;
-  flex-shrink: 0;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  .progress-svg {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    transform: rotate(-90deg);
-    filter: drop-shadow(0 4px 12px rgba($deep-purple, 0.15));
-    z-index: 1;  // ← SVG on layer 1
-
-    .progress-bg {
-      fill: none;
-      stroke: rgba(white, 0.5);
-      stroke-width: 10;
-    }
-
-    .progress-fill {
-      fill: none;
-      stroke: $deep-purple;
-      stroke-width: 10;
-      stroke-linecap: round;
-      stroke-dasharray: 377;
-      transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-  }
-
-  // Text MUST be on higher z-index than SVG
-  .progress-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  font-size: 18px;
-  font-weight: 800;
-  color: $deep-indigo;
-  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  line-height: 1;
-  z-index: 10;
-  // ✅ NO padding-top!
-}
-}
+ 
 
   &:hover {
     .grade-score {
@@ -1032,19 +983,6 @@ $light-lavender: #F8F7FF;
   }
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .shamel-current .circular-progress:hover {
-    transform: scale(1.05) rotate(5deg);
-  }
-  .shamel-current .circular-progress:hover .progress-text {
-    color: $deep-purple;
-  }
-
-.circular-progress{
-   width: 10px;
-  height: 10px;
-}
-}
 
 .shamel-last {
   display: none;
@@ -1917,7 +1855,7 @@ $light-lavender: #F8F7FF;
   }
 
   .info-label {
-    font-size: 10px;
+    font-size: 15px;
     font-weight: 600;
     letter-spacing: 1px;
     color: #8B7FA8;
@@ -1930,7 +1868,7 @@ $light-lavender: #F8F7FF;
   }
 
   .info-value {
-    font-size: 20px;
+    font-size: 25px;
     font-weight: 700;
     color: #2D2540;
     margin: 0;
@@ -1961,7 +1899,7 @@ $light-lavender: #F8F7FF;
   }
 
   .info-sub {
-    font-size: 11px;
+    font-size: 15px;
     color: #8B7FA8;
     margin: 2px 0 0 0;
 
@@ -2214,22 +2152,12 @@ $light-lavender: #F8F7FF;
   
 
 
-  .shamel-current:hover .circular-progress {
-    transform: none !important;
-  }
 
   .stat-visual-center:hover .ring-svg-center {
     transform: rotate(-90deg) !important;
   }
 
-  .shamel-panel .circular-progress {
-    width: 100px;
-    height: 100px;
-    
-    .progress-text {
-      font-size: 20px;
-    }
-  }
+  
 
   .stat-card {
     .ring-svg-center {
@@ -2382,11 +2310,7 @@ $light-lavender: #F8F7FF;
     display: none;
   }
 
-  .shamel-current .circular-progress {
-    position: static;
-    transform: none;
-    margin-top: 24px;
-  }
+  
 }
 
 @media (max-width: 992px) {
@@ -2920,14 +2844,7 @@ lucide-angular {
       }
     }
     
-    .circular-progress {
-      width: 100px;
-      height: 100px;
-      
-      .progress-text {
-        font-size: 20px;
-      }
-    }
+    
   }
 
   // Stats cards mobile - SINGLE COLUMN
@@ -3046,12 +2963,13 @@ lucide-angular {
   }
 
   .session-cards {
-    gap: 16px;
+    gap: 40px;
+
   }
 
   .session-card {
-    padding: 20px;
-    border-radius: 20px;
+    padding: 50px;
+    border-radius: 10px;
     
     .session-header {
       gap: 12px;
@@ -3069,10 +2987,10 @@ lucide-angular {
       
       .session-title-group {
         .session-title {
-          font-size: 16px;
+          font-size: 18px;
           
           .exam-badge {
-            font-size: 10px;
+            font-size: 15px;
             padding: 3px 8px;
             margin-right: 6px;
             
@@ -3084,17 +3002,17 @@ lucide-angular {
         }
         
         .session-topic {
-          font-size: 13px;
+          font-size: 10px;
         }
       }
       
       .status-badge {
-        font-size: 11px;
+        font-size: 15px;
         padding: 5px 10px;
         
         .badge-dot {
-          width: 6px;
-          height: 6px;
+          width: 18px;
+          height: 18px;
         }
       }
     }
@@ -3111,26 +3029,26 @@ lucide-angular {
           margin-bottom: 6px;
           
           .info-icon {
-            width: 18px;
+            width: 15px;
             height: 18px;
           }
         }
         
         .info-label {
-          font-size: 9px;
+          font-size: 14px;
         }
         
         .info-value {
-          font-size: 16px;
+          font-size: 18px;
           
           > div {
-            font-size: 13px !important;
+            font-size: 15px !important;
             padding: 5px 8px !important;
           }
         }
         
         .info-sub {
-          font-size: 10px;
+          font-size: 12px;
         }
       }
     }
@@ -3148,12 +3066,12 @@ lucide-angular {
         }
         
         .homework-label {
-          font-size: 12px;
+          font-size: 15px;
         }
       }
       
       .homework-badge {
-        font-size: 11px;
+        font-size: 15px;
         padding: 5px 10px;
       }
     }
@@ -3227,8 +3145,53 @@ lucide-angular {
 }
 
 /* Disable fake hover effects on touch devices */
-@media (hover: none) {
-  *:hover {
-    transform: none !important;
+
+// ==========================================
+// SHAMEL PERCENTAGE ICON (attendance-style)
+// ==========================================
+.shamel-percentage-icon {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+
+  .ring-svg-center {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+
+    .ring-bg {
+      fill: none;
+      stroke: rgba($deep-purple, 0.15);
+      stroke-width: 19;
+    }
+
+    .ring-fill {
+      fill: none;
+      stroke-width: 19;
+      stroke-linecap: round;
+      stroke-dasharray: 314;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .attendance-ring {
+      stroke: $deep-purple;
+    }
+  }
+
+  .ring-percentage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: $deep-indigo;
+    font-family: 'Cairo', sans-serif;
+    pointer-events: none;
   }
 }
+
+
+

@@ -3,7 +3,6 @@ import { Observable, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-// Admin accounts (still using mock for now)
 const ADMIN_ACCOUNTS = [
   { username: 'admin', password: 'admin123', name: 'Admin User' }
 ];
@@ -40,7 +39,6 @@ export class AuthService {
   private readonly REMEMBER_ME_KEY = 'physics_portal_remember_me';
 
   constructor(private http: HttpClient) {
-    // Load user from localStorage ONLY if "Remember Me" was checked
     this.loadUserFromStorage();
   }
 
@@ -62,12 +60,8 @@ export class AuthService {
     return s;
   }
 
-  /**
-   * Login method - authenticates with backend API
-   */
   login(credentials: LoginCredentials): Observable<LoginResponse> {
     if (credentials.userType === 'parent') {
-      // Authenticate parent with backend API
       return new Observable(observer => {
         const phone = this.normalizePhone(credentials.identifier);
         this.http.post<{
@@ -91,7 +85,6 @@ export class AuthService {
 
               this.currentUser.set(user);
 
-              // Save to storage only if "Remember Me" is checked
               if (credentials.rememberMe) {
                 this.saveUserToStorage(user, true);
               } else {
@@ -121,7 +114,6 @@ export class AuthService {
         });
       });
     } else {
-      // Admin login via backend API
       return new Observable(observer => {
         this.http.post<{ success: boolean; user?: { username: string; name?: string }; message?: string }>(
           `${environment.apiUrl}/admin/login`,
@@ -161,9 +153,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Reset password for first-time login
-   */
   resetPassword(newPassword: string): Observable<{ success: boolean; message?: string }> {
     const user = this.currentUser();
 
@@ -182,7 +171,6 @@ export class AuthService {
     }
 
     if (user.type === 'parent') {
-      // Reset password via backend API
       return new Observable(observer => {
         const phone = this.normalizePhone(user.identifier || '');
         this.http.post<{ success: boolean; message?: string }>(`${environment.apiUrl}/auth/reset-password`, {
@@ -191,11 +179,9 @@ export class AuthService {
         }).subscribe({
           next: (response) => {
             if (response.success) {
-              // Update user state
               const updatedUser = { ...user, needsPasswordReset: false };
               this.currentUser.set(updatedUser);
 
-              // Update storage with new user state
               const rememberMe = this.isRememberMeEnabled();
               this.saveUserToStorage(updatedUser, rememberMe);
             }
@@ -212,7 +198,6 @@ export class AuthService {
         });
       });
     } else {
-      // Admin password reset via backend API
       return new Observable(observer => {
         this.http.post<{ success: boolean; message?: string }>(`${environment.apiUrl}/admin/reset-password`, {
           username: user.identifier,
@@ -237,9 +222,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Change password (requires current password) for logged-in user
-   */
   changePassword(currentPassword: string, newPassword: string): Observable<{ success: boolean; message?: string }> {
     const user = this.currentUser();
     if (!user) {
@@ -288,78 +270,54 @@ export class AuthService {
     }
   }
 
-  /**
-   * Logout method
-   */
   logout(): void {
     this.currentUser.set(null);
-    // Remove all auth-related persisted data to avoid auto-login
     try {
       localStorage.removeItem(this.STORAGE_KEY);
       localStorage.removeItem(this.REMEMBER_ME_KEY);
       localStorage.removeItem(this.PASSWORD_STORAGE_KEY);
       sessionStorage.clear();
     } catch (e) {
-      console.warn('Warning clearing storage during logout', e);
+      // Silent fail
     }
   }
 
-  /**
-   * Check if user is logged in
-   */
   isLoggedIn(): boolean {
     return this.currentUser() !== null;
   }
 
-  /**
-   * Check if "Remember Me" is enabled
-   */
   isRememberMeEnabled(): boolean {
     return localStorage.getItem(this.REMEMBER_ME_KEY) === 'true';
   }
 
-  /**
-   * Get current user
-   */
   getCurrentUser(): User | null {
     return this.currentUser();
   }
 
-  /**
-   * Get user type
-   */
   getUserType(): 'parent' | 'admin' | null {
     const user = this.currentUser();
     return user ? user.type : null;
   }
 
-  /**
-   * Check if password reset is needed
-   */
   needsPasswordReset(): boolean {
     const user = this.currentUser();
     return user?.needsPasswordReset ?? false;
   }
-
-  // Private helper methods (no longer needed for parent auth, but keeping for admin)
 
   private saveUserToStorage(user: User, rememberMe: boolean): void {
     if (rememberMe) {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
       localStorage.setItem(this.REMEMBER_ME_KEY, 'true');
     } else {
-      // Store user for current session only (will be cleared on logout)
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
       localStorage.removeItem(this.REMEMBER_ME_KEY);
     }
   }
 
   private loadUserFromStorage(): void {
-    // Only auto-load if "Remember Me" was checked
     const rememberMe = localStorage.getItem(this.REMEMBER_ME_KEY) === 'true';
 
     if (!rememberMe) {
-      // Clear any existing session
       localStorage.removeItem(this.STORAGE_KEY);
       return;
     }
@@ -369,9 +327,7 @@ export class AuthService {
       try {
         const user = JSON.parse(stored) as User;
         this.currentUser.set(user);
-        console.log('✅ User auto-logged in (Remember Me enabled)');
       } catch (error) {
-        console.error('Error loading user from storage:', error);
         localStorage.removeItem(this.STORAGE_KEY);
         localStorage.removeItem(this.REMEMBER_ME_KEY);
       }

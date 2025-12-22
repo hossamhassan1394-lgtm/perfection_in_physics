@@ -20,7 +20,6 @@ export interface Student {
   };
 }
 
-// Mock student data
 const MOCK_STUDENTS: Student[] = [
   {
     id: 'M-123',
@@ -46,9 +45,6 @@ const MOCK_STUDENTS: Student[] = [
 export class StudentService {
   constructor(private http: HttpClient, private authService: AuthService) { }
 
-  /**
-   * Get students for the logged-in parent from backend API
-   */
   getStudentsForParent(): Observable<Student[]> {
     const user = this.authService.getCurrentUser();
     if (!user || !user.identifier) return of([]);
@@ -57,7 +53,6 @@ export class StudentService {
     return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/parent/students`, { params }).pipe(
       map(resp => {
         const students = resp.students || [];
-        // Deduplicate students by `id` where possible; fallback to `name+student_no`.
         const seen = new Map<string, boolean>();
         const unique: Student[] = [];
         for (const s of students) {
@@ -77,9 +72,6 @@ export class StudentService {
     );
   }
 
-  /**
-   * Get all students (for admin)
-   */
   getAllStudents(): Observable<Student[]> {
     return this.http.get<{ students: Student[] }>(`${environment.apiUrl}/students`).pipe(
       map(resp => resp.students || []),
@@ -87,9 +79,6 @@ export class StudentService {
     );
   }
 
-  /**
-   * Get student by ID
-   */
   getStudentById(id: string): Observable<Student | undefined> {
     const user = this.authService.getCurrentUser();
     if (!user || !user.identifier) return of(undefined);
@@ -101,14 +90,18 @@ export class StudentService {
     );
   }
 
-  /**
-   * Get sessions for a given student for the logged-in parent
-   */
-  getSessionsForStudent(studentId: string): Observable<any[]> {
+  getSessionsForStudent(combinedId: string): Observable<any[]> {
     const user = this.authService.getCurrentUser();
     if (!user || !user.identifier) return of([]);
-
-    const params = new HttpParams().set('phone_number', user.identifier).set('student_id', studentId);
+    
+    const parts = combinedId.split('_');
+    const parentNo = parts[0];
+    const studentName = parts.slice(1).join('_');
+    
+    const params = new HttpParams()
+      .set('phone_number', user.identifier)
+      .set('student_name', studentName);
+    
     return this.http.get<{ sessions: any[] }>(`${environment.apiUrl}/parent/sessions`, { params }).pipe(
       map(resp => resp.sessions || []),
       catchError(() => of([]))

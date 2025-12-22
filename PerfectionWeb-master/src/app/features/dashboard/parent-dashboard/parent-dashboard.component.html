@@ -8,7 +8,7 @@
           <lucide-angular [img]="Atom" class="logo-icon"></lucide-angular>
         </div>
         <div class="brand-text">
-          <h1 class="brand-name">Perfection in Physics woooooooooork</h1>
+          <h1 class="brand-name">Perfection in Physics </h1>
           <p class="brand-subtitle">Excellence Portal</p>
         </div>
       </div>
@@ -119,10 +119,10 @@
                 </span>
                 <span class="student-grade">{{ selectedStudent()!.grade }}</span>
               </div>
-              <div class="hero-stats-pills">
+             <div class="hero-stats-pills">
                 <span class="stat-pill">
-                  <lucide-angular [img]=" Calendar " class=" pill-icon ">  </lucide-angular>
-                    {{  sessionCount()  }}   {{ sessionCount() === 1 ? (lang() === 'en' ? ' Session ' : ' جلسة ') : (lang() === 'en' ? ' Sessions ' : 'جلسات') }}
+                  <lucide-angular [img]="Calendar" class="pill-icon"></lucide-angular>
+                  {{ attendedCount() }} {{ attendedCount() === 1 ? (lang() === 'en' ? 'Session Attended' : 'جلسة حضرت') : (lang() === 'en' ? 'Sessions Attended' : 'جلسات حضرت') }}
                 </span>
                 <span class="stat-pill" *ngIf="selectedStudent()!.ids.length > 1">
                   <lucide-angular [img]="Users" class="pill-icon"></lucide-angular>
@@ -171,15 +171,22 @@
               </div>
               <p class="grade-subtitle">{{ getCurrentShamel().label || (lang() === 'en' ? 'Comprehensive Assessment' : 'التقييم الشامل') }}</p>
             </div>
-            <div class="circular-progress">
-              <svg viewBox="0 0 140 140" class="progress-svg">
-                <circle cx="70" cy="70" r="60" class="progress-bg"></circle>
-                <circle cx="70" cy="70" r="60" class="progress-fill"
-                  [style.stroke-dashoffset]="(getCurrentShamel().total ? (377 - (377 * (getCurrentShamel().score / getCurrentShamel().total))) : 377)">
-                </circle>
-              </svg>
-              <div class="progress-text">{{ getCurrentShamel().total ? (Math.round((getCurrentShamel().score / getCurrentShamel().total) * 100) + '%') : '0%' }}</div>
-            </div>
+          <div class="shamel-percentage-icon">
+  <svg viewBox="0 0 120 120" class="ring-svg-center">
+    <circle cx="60" cy="60" r="50" class="ring-bg"></circle>
+    <circle
+      cx="60"
+      cy="60"
+      r="50"
+      class="ring-fill attendance-ring"
+      [style.stroke-dashoffset]="314 - (314 * (getCurrentShamel().score / getCurrentShamel().total))">
+    </circle>
+  </svg>
+  <div class="ring-percentage">
+    {{ Math.round((getCurrentShamel().score / getCurrentShamel().total) * 100) }}%
+  </div>
+</div>
+
           </div>
         </div>
 
@@ -317,7 +324,7 @@
       <div class="info-icon-wrapper">
         <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
       </div>
-      <p class="info-label">{{ lang() === 'en' ? 'START TIME' : 'وقت البداية' }}</p>
+      <p class="info-label">{{ lang() === 'en' ? 'Attendance Time' : 'وقت الحضور' }}</p>
       <div class="info-value">
         <div *ngIf="formatTimestamp(session.start_time || session.startTime) as st" class="time-badge">
           {{ st }}
