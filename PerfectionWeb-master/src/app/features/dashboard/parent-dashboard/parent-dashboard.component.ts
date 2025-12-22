@@ -189,9 +189,8 @@ export class ParentDashboardComponent implements OnInit {
           this.selectedStudent.set(first);
           this.selectedStudentCombinedId.set(first.combinedId);
 
-          // Add small delay to ensure DOM is ready
+          // Add small delay to ensure DOM is ready, then load available months (which will load sessions)
           setTimeout(() => {
-            this.loadSessionsForStudent(first);
             this.loadAvailableMonthsForStudent(first);
           }, 100);
         } else {
@@ -228,15 +227,25 @@ export class ParentDashboardComponent implements OnInit {
     const combined = student.combinedId;
     this.studentService.getAvailableMonthsForStudent(combined).subscribe({
       next: (months) => {
-        // Use only months returned by backend. If none returned, leave empty (only 'All months' will be shown).
+        // Use only months returned by backend. If months returned, default to the first month and load sessions for it.
         if (months && months.length > 0) {
+          // ensure months are sorted ascending
+          months.sort((a,b)=>a-b);
           this.availableMonths.set(months);
+          // default selected month to first available
+          this.selectedMonth.set(months[0]);
+          this.loadSessionsForStudent(student, months[0]);
         } else {
+          // no months available — clear selection and load all sessions
           this.availableMonths.set([]);
+          this.selectedMonth.set(null);
+          this.loadSessionsForStudent(student);
         }
       },
       error: () => {
         this.availableMonths.set([]);
+        this.selectedMonth.set(null);
+        this.loadSessionsForStudent(student);
       }
     });
   }
