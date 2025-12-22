@@ -220,7 +220,7 @@ export class ParentDashboardComponent implements OnInit {
     }
   }
 
-  loadSessionsForStudent(student: UniqueStudent): void {
+  loadSessionsForStudent(student: UniqueStudent, month?: number | null): void {
     this.isLoadingSessions.set(true);
 
     this.studentService.getSessionsForStudent(student.combinedId).subscribe({
@@ -240,13 +240,28 @@ export class ParentDashboardComponent implements OnInit {
           return getTimestamp(b) - getTimestamp(a);
         });
 
-        this.sessions.set(sortedSessions);
+        // If a month filter was provided, filter by month (month is 1..12)
+        let effectiveSessions = sortedSessions;
+        if (month != null) {
+          const m = Number(month);
+          if (!isNaN(m)) {
+            effectiveSessions = sortedSessions.filter(s => {
+              const dateStr = (s as any).date || (s as any).start_time || (s as any).startTime;
+              if (!dateStr) return false;
+              const d = new Date(String(dateStr));
+              if (isNaN(d.getTime())) return false;
+              return (d.getMonth() + 1) === m;
+            });
+          }
+        }
+
+        this.sessions.set(effectiveSessions);
         this.isLoadingSessions.set(false);
 
-        // Calculate session statistics using sorted list
-        const regularSessions = sortedSessions.filter(s => {
+        // Calculate session statistics using effectiveSessions list
+        const regularSessions = effectiveSessions.filter(s => {
           const sessionAny = s as any;
-          const isGeneralExam = 
+          const isGeneralExam =
             sessionAny.is_general_exam === true ||
             sessionAny.is_general_exam === 'true' ||
             sessionAny.is_general_exam === 1 ||
@@ -319,12 +334,12 @@ export class ParentDashboardComponent implements OnInit {
     sessions.forEach(session => {
       // Skip general exams
       const sessionAny = session as any;
-      const isGeneralExam = 
+      const isGeneralExam =
         sessionAny.is_general_exam === true ||
         sessionAny.is_general_exam === 'true' ||
         sessionAny.is_general_exam === 1 ||
         sessionAny.isGeneralExam === true;
-      
+
       if (session.attendance === 'attended' && !isGeneralExam) {
         totalCorrect += session.quizCorrect || 0;
         const totalForSession = session.adminQuizMark || session.quizTotal || 0;
@@ -345,12 +360,12 @@ export class ParentDashboardComponent implements OnInit {
     sessions.forEach(session => {
       // Skip general exams - must match getQuizPerformance logic
       const sessionAny = session as any;
-      const isGeneralExam = 
+      const isGeneralExam =
         sessionAny.is_general_exam === true ||
         sessionAny.is_general_exam === 'true' ||
         sessionAny.is_general_exam === 1 ||
         sessionAny.isGeneralExam === true;
-      
+
       if (session.attendance === 'attended' && !isGeneralExam) {
         totalCorrect += session.quizCorrect || 0;
         const totalForSession = session.adminQuizMark || session.quizTotal || 0;

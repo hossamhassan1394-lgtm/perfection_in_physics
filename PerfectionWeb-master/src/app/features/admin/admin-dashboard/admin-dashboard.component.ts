@@ -42,7 +42,7 @@ export class AdminDashboardComponent implements OnInit {
 
   // Component state
   allStudents = signal<Student[]>([]);
-  selectedMonth = signal<number | null>(null);
+  // selectedMonth = signal<number | null>(null);
   uploadErrors = signal<Array<{ timestamp: string; level: string; message: string }>>([]);
 
   // Computed statistics
