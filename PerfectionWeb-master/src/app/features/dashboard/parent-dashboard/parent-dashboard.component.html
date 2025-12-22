@@ -407,6 +407,11 @@
     </span>
   </div>
 
+  <!-- Missed session warning -->
+  <div *ngIf="session.attendance === 'missed'" class="missed-warning" style="margin-top:12px;padding:10px;background:#fff4e5;border-left:4px solid #ffb020;border-radius:6px;color:#663b00;font-weight:600;">
+    {{ lang() === 'en' ? 'Student should make up this session as soon as possible' : 'على الطالب تعويض الحصة في اقرب وقت' }}
+  </div>
+
             
               </div>
             </div>
