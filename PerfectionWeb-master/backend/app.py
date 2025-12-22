@@ -981,12 +981,38 @@ def get_parent_months():
         return jsonify({'error': 'phone_number query parameter required'}), 400
     phone = normalize_phone(phone)
     try:
-        query = supabase.table('session_records').select('month').eq('parent_no', phone)
+        query = supabase.table('session_records').select('month', 'finish_time', 'start_time', 'created_at').eq('parent_no', phone)
         if student_name:
             query = query.eq('student_name', student_name)
         res = query.execute()
         records = res.data or []
-        months = sorted(list({int(r.get('month')) for r in records if r.get('month') is not None}))
+
+        months_set = set()
+        for r in records:
+            try:
+                m = r.get('month')
+                if m is not None:
+                    # ensure int
+                    try:
+                        months_set.add(int(m))
+                        continue
+                    except Exception:
+                        pass
+
+                # If month is missing or invalid, try deriving from finish_time, start_time, or created_at
+                for dkey in ('finish_time', 'start_time', 'created_at'):
+                    val = r.get(dkey)
+                    if val:
+                        try:
+                            dt = date_parser.parse(str(val))
+                            months_set.add(int(dt.month))
+                            break
+                        except Exception:
+                            continue
+            except Exception:
+                continue
+
+        months = sorted(list(months_set))
         return jsonify({'months': months}), 200
     except Exception as e:
         logger.exception(f"Error fetching parent months: {str(e)}")
