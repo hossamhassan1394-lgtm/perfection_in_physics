@@ -94,18 +94,18 @@ export class StudentService {
   getSessionsForStudent(combinedId: string, month?: number | null): Observable<any[]> {
     const user = this.authService.getCurrentUser();
     if (!user || !user.identifier) return of([]);
-    
+
     const parts = combinedId.split('_');
     const parentNo = parts[0];
     const studentName = parts.slice(1).join('_');
-    
+
     let params = new HttpParams()
       .set('phone_number', user.identifier)
       .set('student_name', studentName);
     if (month !== undefined && month !== null) {
       params = params.set('month', String(month));
     }
-    
+
     return this.http.get<{ sessions: any[] }>(`${environment.apiUrl}/parent/sessions`, { params }).pipe(
       map(resp => resp.sessions || []),
       catchError(() => of([]))

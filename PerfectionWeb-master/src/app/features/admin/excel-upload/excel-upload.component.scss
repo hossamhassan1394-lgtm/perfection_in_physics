@@ -1,6 +1,6 @@
 .excel-upload-container {
   padding: 2rem;
-  max-width: 800px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -11,6 +11,8 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 h2 {
@@ -67,6 +69,14 @@ h2 {
 
   select {
     cursor: pointer;
+    position: relative;
+    z-index: 10;
+  }
+
+  select option {
+    background: rgba(50, 50, 50, 0.95);
+    color: #fff;
+    padding: 0.5rem;
   }
 
   small {

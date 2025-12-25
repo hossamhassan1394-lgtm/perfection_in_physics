@@ -61,12 +61,12 @@ export class ExcelUploadComponent {
   loadOptions(): void {
     this.excelUploadService.getGroups().subscribe({
       next: (groups) => this.groups.set(groups),
-      error: () => {}
+      error: () => { }
     });
 
     this.excelUploadService.getSessions().subscribe({
       next: (sessions) => this.sessions.set(sessions),
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -112,7 +112,7 @@ export class ExcelUploadComponent {
     const finishTimeValue = this.finishTime
       ? new Date(this.finishTime).toISOString().slice(0, 19).replace('T', ' ')
       : null;
-    
+
     if (this.isGeneralExam && this.quizMark !== null && this.quizMark !== undefined) {
       this.quizMark = Math.trunc(this.quizMark);
     }

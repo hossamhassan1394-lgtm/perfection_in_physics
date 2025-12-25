@@ -6,7 +6,7 @@ import { AppComponent } from './app/app.component';
 const originalWarn = console.warn;
 console.warn = (...args: any[]) => {
   const message = args[0]?.toString() || '';
-  
+
   // List of warnings to suppress (browser security warnings in development)
   const suppressPatterns = [
     'Cookie',
@@ -19,16 +19,16 @@ console.warn = (...args: any[]) => {
     'cross-site',
     'third-party'
   ];
-  
+
   // Check if this warning should be suppressed
-  const shouldSuppress = suppressPatterns.some(pattern => 
+  const shouldSuppress = suppressPatterns.some(pattern =>
     message.includes(pattern)
   );
-  
+
   if (shouldSuppress) {
     return; // Don't show these warnings
   }
-  
+
   // Show all other warnings
   originalWarn.apply(console, args);
 };

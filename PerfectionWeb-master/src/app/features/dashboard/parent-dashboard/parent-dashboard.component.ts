@@ -230,7 +230,7 @@ export class ParentDashboardComponent implements OnInit {
         // Use only months returned by backend. If months returned, default to the first month and load sessions for it.
         if (months && months.length > 0) {
           // ensure months are sorted ascending
-          months.sort((a,b)=>a-b);
+          months.sort((a, b) => a - b);
           this.availableMonths.set(months);
           // default selected month to latest available (most recent)
           const latest = months[months.length - 1];
