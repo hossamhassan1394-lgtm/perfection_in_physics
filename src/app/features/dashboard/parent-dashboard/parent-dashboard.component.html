@@ -322,6 +322,15 @@
                     <p class="info-value">{{ session.endTime }}</p>
                   </div>
 
+                  <div class="info-item" *ngIf="session.quizCorrect > 0">
+                    <div class="info-icon-wrapper">
+                      <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
+                    </div>
+                    <p class="info-label">QUIZ SCORE</p>
+                    <p class="info-value">{{ session.quizCorrect }}/{{ session.quizTotal }}</p>
+                    <p class="info-sub">questions</p>
+                  </div>
+
                   <div class="info-item">
                     <div class="info-icon-wrapper">
                       <lucide-angular [img]="DollarSign" class="info-icon"></lucide-angular>
