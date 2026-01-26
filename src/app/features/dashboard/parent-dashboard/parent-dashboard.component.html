@@ -1,0 +1,370 @@
+<div class="dashboard-container">
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="nav-content">
+      <!-- Logo & Brand -->
+      <div class="brand">
+        <div class="logo-circle">
+          <lucide-angular [img]="Atom" class="logo-icon"></lucide-angular>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-name">Perfection in Physics</h1>
+          <p class="brand-subtitle">Excellence Portal</p>
+        </div>
+      </div>
+
+      <!-- User Info & Actions -->
+      <div class="nav-actions">
+        <div class="user-info">
+          <div class="status-dot"></div>
+          <div class="user-details">
+            <p class="user-name">{{ selectedStudent()?.name || 'Ahmed Hassan' }}</p>
+            <p class="user-grade">{{ selectedStudent()?.grade || '3rd Secondary (Grade 12)' }}</p>
+          </div>
+        </div>
+
+        <button class="settings-btn" title="Settings">
+          <lucide-angular [img]="Settings" class="btn-icon"></lucide-angular>
+        </button>
+
+        <button class="logout-btn" (click)="onLogout()">
+          <span>Logout</span>
+          <lucide-angular [img]="LogOut" class="btn-icon"></lucide-angular>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="content-wrapper">
+      
+      <!-- Student Selector -->
+      <div class="student-selector-wrapper">
+        <label for="student-select" class="selector-label">
+          <lucide-angular [img]="Users" class="label-icon"></lucide-angular>
+          SELECT STUDENT
+        </label>
+        <div class="select-container">
+          <select
+            id="student-select"
+            class="student-select"
+          >
+            <option *ngFor="let student of students()" [value]="student.id">
+              {{ student.name }}
+            </option>
+          </select>
+          <lucide-angular [img]="ChevronDown" class="select-arrow"></lucide-angular>
+        </div>
+      </div>
+
+      <div *ngIf="selectedStudent()">
+        
+        <!-- Hero Profile Card -->
+        <div class="hero-card">
+          <div class="hero-content">
+            <!-- Left Section -->
+            <div class="hero-left">
+              <p class="hero-welcome">Welcome</p>
+              <h2 class="hero-name">{{ selectedStudent()!.name }}</h2>
+              <div class="hero-meta">
+                <span class="student-id-badge">{{ selectedStudent()!.id }}</span>
+                <span class="student-grade">{{ selectedStudent()!.grade }}</span>
+              </div>
+              <div class="hero-stats-pills">
+                <span class="stat-pill">
+                  <lucide-angular [img]="Calendar" class="pill-icon"></lucide-angular>
+                  5 Sessions
+                </span>
+                <span class="stat-pill">
+                  <lucide-angular [img]="TrendingUp" class="pill-icon"></lucide-angular>
+                  88% Avg
+                </span>
+              </div>
+              <div class="location-pill">
+                <lucide-angular [img]="MapPin" class="location-icon"></lucide-angular>
+                Alexandria, Egypt
+              </div>
+            </div>
+
+            <!-- Right Section - Illustration -->
+            <div class="hero-right">
+              <div class="illustration-container">
+                <div class="illustration-blob"></div>
+                <div class="illustration-items">
+                  <div class="illust-item item-1">
+                    <lucide-angular [img]="Atom" class="illust-icon"></lucide-angular>
+                  </div>
+                  <div class="illust-item item-2">
+                    <lucide-angular [img]="Zap" class="illust-icon"></lucide-angular>
+                  </div>
+                  <div class="illust-item item-3">
+                    <lucide-angular [img]="BookOpen" class="illust-icon"></lucide-angular>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shamel Grade Panel -->
+        <div class="shamel-panel">
+          <div class="shamel-section shamel-current">
+            <div class="section-header">
+              <lucide-angular [img]="Trophy" class="header-icon"></lucide-angular>
+              <span class="header-label">CURRENT SHAMEL GRADE</span>
+              <span class="date-badge">December 2025</span>
+            </div>
+            <div class="shamel-grade-display">
+              <div class="grade-numbers">
+                <span class="grade-score">48</span>
+                <span class="grade-separator">/</span>
+                <span class="grade-total">60</span>
+              </div>
+              <p class="grade-subtitle">Comprehensive Assessment</p>
+            </div>
+            <div class="circular-progress">
+              <svg viewBox="0 0 140 140" class="progress-svg">
+                <circle cx="70" cy="70" r="60" class="progress-bg"></circle>
+                <circle 
+                  cx="70" 
+                  cy="70" 
+                  r="60" 
+                  class="progress-fill"
+                  [style.stroke-dashoffset]="377 - (377 * 0.8)"
+                ></circle>
+              </svg>
+              <div class="progress-text">80%</div>
+            </div>
+          </div>
+
+          <div class="shamel-divider"></div>
+
+          <div class="shamel-section shamel-last">
+            <div class="section-header">
+              <lucide-angular [img]="History" class="header-icon"></lucide-angular>
+              <span class="header-label">LAST SHAMEL</span>
+            </div>
+            <div class="last-grade">
+              <span class="last-score">45/60</span>
+              <span class="comparison-badge positive">
+                <lucide-angular [img]="TrendingUp" class="badge-icon"></lucide-angular>
+                +3 points
+              </span>
+            </div>
+            <p class="last-date">September 2025</p>
+            <div class="trend-chart">
+              <svg viewBox="0 0 80 40" class="trend-svg">
+                <polyline 
+                  points="5,30 25,20 45,25 65,15 75,10" 
+                  class="trend-line"
+                ></polyline>
+                <circle cx="5" cy="30" r="3" class="trend-dot"></circle>
+                <circle cx="25" cy="20" r="3" class="trend-dot"></circle>
+                <circle cx="45" cy="25" r="3" class="trend-dot"></circle>
+                <circle cx="65" cy="15" r="3" class="trend-dot"></circle>
+                <circle cx="75" cy="10" r="4" class="trend-dot active"></circle>
+              </svg>
+            </div>
+          </div>
+
+          <div class="shamel-divider"></div>
+
+          <div class="shamel-section shamel-next">
+            <div class="section-header">
+              <lucide-angular [img]="CalendarDays" class="header-icon"></lucide-angular>
+              <span class="header-label">NEXT SHAMEL</span>
+            </div>
+            <div class="countdown">In 45 Days</div>
+            <p class="next-date">February 1, 2026</p>
+            <div class="prep-progress">
+              <p class="prep-label">Preparation Progress</p>
+              <div class="prep-bar">
+                <div class="prep-fill" [style.width.%]="35"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Cards Row -->
+        <div class="stats-row">
+          <!-- Attendance Card -->
+          <div class="stat-card">
+            <div class="stat-icon-wrapper attendance-icon">
+              <lucide-angular [img]="Calendar" class="stat-icon"></lucide-angular>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">ATTENDANCE RATE</p>
+              <p class="stat-value">{{ selectedStudent()!.attendance }}%</p>
+              <p class="stat-detail">4/5 sessions</p>
+            </div>
+            <div class="stat-visual">
+              <svg viewBox="0 0 100 100" class="ring-svg">
+                <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
+                <circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  class="ring-fill attendance-ring"
+                  [style.stroke-dashoffset]="251 - (251 * selectedStudent()!.attendance / 100)"
+                ></circle>
+              </svg>
+            </div>
+            <div class="stat-progress-bar">
+              <div class="progress-fill attendance-fill" [style.width.%]="selectedStudent()!.attendance"></div>
+            </div>
+          </div>
+
+          <!-- Payment Card -->
+          <div class="stat-card">
+            <div class="stat-icon-wrapper payment-icon">
+              <lucide-angular [img]="DollarSign" class="stat-icon"></lucide-angular>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">PAYMENT STATUS</p>
+              <p class="stat-value payment-value">{{ getPaymentPercentage() }}%</p>
+              <p class="stat-detail">{{ selectedStudent()!.payments.paid }} / {{ selectedStudent()!.payments.total }} EGP</p>
+            </div>
+            <div class="stat-visual">
+              <svg viewBox="0 0 100 100" class="ring-svg">
+                <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
+                <circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  class="ring-fill payment-ring"
+                  [style.stroke-dashoffset]="251 - (251 * getPaymentPercentage() / 100)"
+                ></circle>
+              </svg>
+            </div>
+            <div class="stat-progress-bar">
+              <div class="progress-fill payment-fill" [style.width.%]="getPaymentPercentage()"></div>
+            </div>
+          </div>
+
+          <!-- Quiz Performance Card -->
+          <div class="stat-card">
+            <div class="stat-icon-wrapper quiz-icon">
+              <lucide-angular [img]="GraduationCap" class="stat-icon"></lucide-angular>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">QUIZ PERFORMANCE</p>
+              <p class="stat-value">{{ selectedStudent()!.quizzes.average }}%</p>
+              <p class="stat-detail">Across all sessions</p>
+            </div>
+            <div class="stat-visual">
+              <div class="bar-chart">
+                <div class="bar" [style.height.%]="92"></div>
+                <div class="bar" [style.height.%]="85"></div>
+                <div class="bar" [style.height.%]="88"></div>
+                <div class="bar" [style.height.%]="95"></div>
+                <div class="bar" [style.height.%]="80"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session History Section -->
+        <div class="session-section">
+          <div class="section-header-row">
+            <div class="section-title-group">
+              <lucide-angular [img]="BookOpen" class="title-icon"></lucide-angular>
+              <div>
+                <h3 class="section-title">Session History</h3>
+                <p class="section-subtitle">Detailed record of all physics sessions</p>
+              </div>
+            </div>
+            <button class="filter-btn">
+              <lucide-angular [img]="Filter" class="btn-icon"></lucide-angular>
+              Filter
+            </button>
+          </div>
+
+          <!-- Session Cards Carousel -->
+          <div class="carousel-wrapper">
+            <button class="carousel-nav nav-left" (click)="scrollSessions('left')">
+              <lucide-angular [img]="ChevronLeft" class="nav-icon"></lucide-angular>
+            </button>
+
+            <div class="session-cards" #sessionCarousel>
+              <div *ngFor="let session of sessions()" class="session-card">
+                <!-- Session Header -->
+                <div class="session-header">
+                  <div class="session-icon-wrapper">
+                    <lucide-angular [img]="Zap" class="session-icon"></lucide-angular>
+                  </div>
+                  <div class="session-title-group">
+                    <h4 class="session-title">Session #{{ session.id }} • Chapter {{ session.chapter }}</h4>
+                    <p class="session-topic">{{ session.name }}</p>
+                  </div>
+                  <span class="status-badge" [ngClass]="session.attendance">
+                    <span class="badge-dot"></span>
+                    {{ session.attendance === 'attended' ? 'Attended' : session.attendance === 'upcoming' ? 'Upcoming' : 'Missed' }}
+                  </span>
+                </div>
+
+                <!-- Session Info Grid -->
+                <div class="session-info-grid">
+                  <div class="info-item">
+                    <div class="info-icon-wrapper">
+                      <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
+                    </div>
+                    <p class="info-label">START TIME</p>
+                    <p class="info-value">{{ session.startTime }}</p>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-icon-wrapper">
+                      <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
+                    </div>
+                    <p class="info-label">END TIME</p>
+                    <p class="info-value">{{ session.endTime }}</p>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-icon-wrapper">
+                      <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
+                    </div>
+                    <p class="info-label">QUIZ SCORE</p>
+                    <p class="info-value">{{ session.quizCorrect === 0 ? 'no quiz' : session.quizCorrect + '/' + session.quizTotal }}</p>
+                    <p class="info-sub">questions</p>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-icon-wrapper">
+                      <lucide-angular [img]="DollarSign" class="info-icon"></lucide-angular>
+                    </div>
+                    <p class="info-label">PAYMENT</p>
+                    <p class="info-value">{{ session.payment }} EGP</p>
+                  </div>
+                </div>
+
+                <!-- Homework Status -->
+                <div class="homework-status">
+                  <div class="homework-left">
+                    <lucide-angular [img]="FileText" class="homework-icon"></lucide-angular>
+                    <span class="homework-label">Homework Status</span>
+                  </div>
+                  <span class="homework-badge" [ngClass]="session.homeworkStatus">
+                    {{ session.homeworkStatus === 'completed' ? 'Completed' : 'Pending' }}
+                  </span>
+                </div>
+
+                <!-- Session Date -->
+                <div class="session-footer">
+                  <lucide-angular [img]="Calendar" class="footer-icon"></lucide-angular>
+                  <span class="session-date">{{ session.date }}</span>
+                </div>
+              </div>
+            </div>
+
+            <button class="carousel-nav nav-right" (click)="scrollSessions('right')">
+              <lucide-angular [img]="ChevronRight" class="nav-icon"></lucide-angular>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>

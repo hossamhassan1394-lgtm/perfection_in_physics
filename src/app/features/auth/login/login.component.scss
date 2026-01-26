@@ -1,0 +1,366 @@
+// Circuit pattern background
+.circuit-pattern {
+  background-image: 
+    linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* ============================= */
+/* GLOBAL PHYSICS AMBIENCE */
+/* ============================= */
+
+.physics-ambient {
+  overflow: hidden;
+}
+
+/* ⚡ Lightning Bolts - Blue Theme */
+.lightning-bolt {
+  position: fixed;
+  opacity: 0;
+  filter: drop-shadow(0 0 15px currentColor);
+  animation: lightningStrike 5s infinite;
+}
+
+.bolt-1 {
+  top: 8%;
+  left: 12%;
+  animation-delay: 0s;
+  color: #4FD1C5;
+}
+
+.bolt-2 {
+  top: 65%;
+  left: 8%;
+  animation-delay: 1.25s;
+  color: #667EEA;
+}
+
+.bolt-3 {
+  top: 25%;
+  right: 10%;
+  animation-delay: 2.5s;
+  color: #9F7AEA;
+}
+
+.bolt-4 {
+  bottom: 15%;
+  right: 12%;
+  animation-delay: 3.75s;
+  color: #4FD1C5;
+}
+
+/* 📐 Floating Formulas */
+.formula {
+  position: fixed;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 600;
+  opacity: 0;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 15px rgba(79, 209, 197, 0.6);
+  animation: formulaFloat 25s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+/* Electromagnetic Induction */
+.formula-emf {
+  top: 5%;
+  left: 5%;
+  animation-delay: 0s;
+  font-size: 1.6rem;
+}
+
+/* Ohm's Law */
+.formula-ohm {
+  top: 48%;
+  left: 6%;
+  animation-delay: 2s;
+  font-size: 1.5rem;
+}
+
+/* Power */
+.formula-power {
+  top: 62%;
+  left: 4%;
+  animation-delay: 0s;
+  font-size: 1.45rem;
+}
+
+/* Capacitor */
+.formula-capacitor {
+  top: 78%;
+  left: 7%;
+  animation-delay: 4s;
+  font-size: 1.5rem;
+}
+
+/* Inductor */
+.formula-inductor {
+  bottom: 8%;
+  left: 5%;
+  animation-delay: 8s;
+  font-size: 1.55rem;
+}
+
+/* Einstein */
+.formula-einstein {
+  top: 52%;
+  right: 4%;
+  animation-delay: 0s;
+  font-size: 1.6rem;
+}
+
+/* 🔌 Component Icons */
+.component-icon {
+  position: fixed;
+  opacity: 0.4;
+  filter: drop-shadow(0 0 8px currentColor);
+  animation: componentFloat 20s ease-in-out infinite;
+}
+
+.solenoid-icon {
+  top: 12%;
+  left: 15%;
+  animation-delay: 0s;
+  color: #4FD1C5;
+}
+
+.capacitor-icon {
+  top: 45%;
+  left: 10%;
+  animation-delay: 4s;
+  color: #667EEA;
+}
+
+.diode-icon {
+  bottom: 25%;
+  left: 12%;
+  animation-delay: 8s;
+  color: #9F7AEA;
+}
+
+.transistor-icon {
+  top: 70%;
+  left: 8%;
+  animation-delay: 12s;
+  color: #ED64A6;
+}
+
+.magnet-icon {
+  top: 18%;
+  right: 15%;
+  animation-delay: 2s;
+}
+
+.resistor-icon {
+  top: 50%;
+  right: 12%;
+  animation-delay: 6s;
+  color: #F6AD55;
+}
+
+.inductor-icon {
+  bottom: 20%;
+  right: 14%;
+  animation-delay: 10s;
+  color: #68D391;
+}
+
+/* ============================= */
+/* ANIMATIONS */
+/* ============================= */
+
+@keyframes lightningStrike {
+  0%, 96%, 100% { 
+    opacity: 0;
+    transform: scale(2.8) translateY(0);
+  }
+  97% { 
+    opacity: 1;
+    transform: scale(2.8) translateY(-3px);
+  }
+  97.5% { 
+    opacity: 1;
+    transform: scale(2.8) translateY(0);
+  }
+  98% { 
+    opacity: 0;
+    transform: scale(2.8) translateY(0);
+  }
+  98.5% { 
+    opacity: 0.9;
+    transform: scale(2.8) translateY(-2px);
+  }
+  99% { 
+    opacity: 0;
+    transform: scale(2.8) translateY(0);
+  }
+}
+
+@keyframes formulaFloat {
+  0% { 
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+  10% {
+    opacity: 0.5;
+  }
+  20% { 
+    transform: translateY(-25px) translateX(12px) scale(1.05);
+    opacity: 0.6;
+  }
+  40% { 
+    transform: translateY(-45px) translateX(-8px) scale(1);
+    opacity: 0.55;
+  }
+  60% { 
+    transform: translateY(-30px) translateX(15px) scale(1.03);
+    opacity: 0.6;
+  }
+  80% { 
+    transform: translateY(-15px) translateX(-5px) scale(1);
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.3;
+  }
+  100% { 
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+}
+
+@keyframes componentFloat {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% { 
+    transform: translateY(-15px) rotate(5deg);
+    opacity: 0.5;
+  }
+  50% { 
+    transform: translateY(-25px) rotate(-3deg);
+    opacity: 0.6;
+  }
+  75% { 
+    transform: translateY(-12px) rotate(4deg);
+    opacity: 0.4;
+  }
+}
+
+// Custom Animations
+@keyframes gradient-shift {
+  0%, 100% { 
+    background-position: 0% 50%; 
+  }
+  50% { 
+    background-position: 100% 50%; 
+  }
+}
+
+@keyframes gradient-rotate {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+@keyframes spin-slow {
+  from { 
+    transform: rotate(0deg); 
+  }
+  to { 
+    transform: rotate(360deg); 
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% { 
+    transform: translateY(0); 
+  }
+  50% { 
+    transform: translateY(-10px); 
+  }
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+// Animation classes
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+.animate-gradient-rotate {
+  animation: gradient-rotate 8s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-in;
+}
+
+// Group variants for focus-within
+.group:focus-within .group-focus-within\:w-full {
+  width: 100%;
+}
+
+// Lucide icon sizing
+lucide-angular {
+  display: inline-block;
+  
+  &.size-4 {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  &.size-5 {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  &.size-8 {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  &.size-12 {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+// Prevent text selection on interactive elements
+button,
+.cursor-default {
+  user-select: none;
+}
+
+// Smooth transitions
+button,
+input,
+lucide-angular,
+.floater,
+.formula {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

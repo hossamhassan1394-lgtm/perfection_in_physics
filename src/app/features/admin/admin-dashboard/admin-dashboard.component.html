@@ -1,0 +1,112 @@
+<div class="min-h-screen bg-gradient-to-br from-[#1a1f3a] to-[#2d1b4e]">
+  <!-- Top Navigation -->
+  <app-top-nav></app-top-nav>
+  
+  <!-- Main Content -->
+  <div class="pt-20 px-4 pb-8">
+    <div class="max-w-7xl mx-auto">
+      
+      <!-- Welcome Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+        <p class="text-white/70">Manage all students and view analytics</p>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        
+        <!-- Total Students -->
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-white/70 text-sm mb-1">Total Students</p>
+              <p class="text-3xl font-bold text-white">{{ totalStudents() }}</p>
+            </div>
+            <lucide-angular [img]="Users" class="w-12 h-12 text-[#4FD1C5]"></lucide-angular>
+          </div>
+        </div>
+
+        <!-- Average Attendance -->
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-white/70 text-sm mb-1">Avg Attendance</p>
+              <p class="text-3xl font-bold text-white">{{ averageAttendance() }}%</p>
+            </div>
+            <lucide-angular [img]="TrendingUp" class="w-12 h-12 text-[#10B981]"></lucide-angular>
+          </div>
+        </div>
+
+        <!-- Total Revenue -->
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-white/70 text-sm mb-1">Total Revenue</p>
+              <p class="text-3xl font-bold text-white">{{ totalRevenue() }}</p>
+            </div>
+            <lucide-angular [img]="DollarSign" class="w-12 h-12 text-[#F6AD55]"></lucide-angular>
+          </div>
+        </div>
+
+        <!-- Avg Quiz Score -->
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-white/70 text-sm mb-1">Avg Quiz Score</p>
+              <p class="text-3xl font-bold text-white">{{ averageQuizScore() }}%</p>
+            </div>
+            <lucide-angular [img]="Award" class="w-12 h-12 text-[#9F7AEA]"></lucide-angular>
+          </div>
+        </div>
+      </div>
+
+      <!-- Students Table -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+        <h2 class="text-xl font-bold text-white mb-4">All Students</h2>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-white/10">
+                <th class="text-left py-3 px-4 text-white/70 font-semibold">Name</th>
+                <th class="text-left py-3 px-4 text-white/70 font-semibold">Grade</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">Attendance</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">Homework</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">Quiz Avg</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let student of allStudents()" 
+                  class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <td class="py-4 px-4 text-white font-medium">{{ student.name }}</td>
+                <td class="py-4 px-4 text-white/70">{{ student.grade }}</td>
+                <td class="py-4 px-4 text-center">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                        [class]="getAttendanceColor(student.attendance)">
+                    {{ student.attendance }}%
+                  </span>
+                </td>
+                <td class="py-4 px-4 text-center text-white/70">
+                  {{ student.homework.completed }}/{{ student.homework.total }}
+                </td>
+                <td class="py-4 px-4 text-center">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                        [class]="getScoreColor(student.quizzes.average)">
+                    {{ student.quizzes.average }}%
+                  </span>
+                </td>
+                <td class="py-4 px-4 text-center">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                        [class]="getPaymentColor(student.payments)">
+                    {{ student.payments.paid }}/{{ student.payments.total }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
