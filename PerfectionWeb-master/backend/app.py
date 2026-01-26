@@ -1201,7 +1201,7 @@ def get_parent_sessions():
                 'created_at': r.get('created_at') or r.get('createdAt') or r.get('created at'),
                 'is_general_exam': r.get('is_general_exam', False),
                 'isGeneralExam': r.get('is_general_exam', False),
-                'no_quiz': no_quiz,
+                'noQuiz': no_quiz,
                 'startTime': formatted_start,
                 'start_time': formatted_start,
                 'attendance': 'attended' if int(r.get('attendance') or 0) == 1 else 'missed',
