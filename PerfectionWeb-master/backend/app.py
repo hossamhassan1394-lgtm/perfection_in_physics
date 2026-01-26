@@ -550,7 +550,7 @@ def create_or_update_parent(parent_no, student_name=None):
         # Silently fail parent creation - don't block the main upload
         logger.warning(f"Could not create parent account for {parent_no}: {str(e)}")
 
-def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam, lecture_name='', exam_name='', has_exam_grade=True, has_payment=True, has_time=True):
+def update_database(records, session_number, quiz_mark, finish_time, group, is_general_exam, lecture_name='', exam_name='', has_exam_grade=True, has_payment=True, has_time=True, month_param=None):
     """
     Update database with parsed records using UPSERT logic
     Works with existing constraint: UNIQUE (student_name, session_number, parent_no)
@@ -644,6 +644,39 @@ def update_database(records, session_number, quiz_mark, finish_time, group, is_g
                         db_data['start_time'] = normalized_start if normalized_start else record.get('start_time')
                     except Exception:
                         db_data['start_time'] = record.get('start_time')
+
+                # Month: prefer explicit admin-provided month_param, otherwise derive from timestamps
+                try:
+                    provided_month = None
+                    if month_param:
+                        try:
+                            m_int = int(month_param)
+                            if 1 <= m_int <= 12:
+                                provided_month = m_int
+                        except Exception:
+                            provided_month = None
+
+                    if provided_month is not None:
+                        db_data['month'] = provided_month
+                    else:
+                        # Derive month from finish_time or start_time if available
+                        month_val = None
+                        if db_data.get('finish_time'):
+                            try:
+                                dt = date_parser.parse(str(db_data.get('finish_time')))
+                                month_val = dt.month
+                            except Exception:
+                                month_val = None
+                        if month_val is None and db_data.get('start_time'):
+                            try:
+                                dt = date_parser.parse(str(db_data.get('start_time')))
+                                month_val = dt.month
+                            except Exception:
+                                month_val = None
+                        if month_val is not None:
+                            db_data['month'] = int(month_val)
+                except Exception:
+                    pass
                 
                 if record.get('homework_status') is not None:
                     db_data['homework_status'] = int(record.get('homework_status'))
@@ -815,6 +848,8 @@ def upload_excel():
         
         # Get form data
         session_number = request.form.get('session_number')
+        # Optional month provided by admin (1..12)
+        month_param = request.form.get('month')
         quiz_mark = request.form.get('quiz_mark')
         finish_time = request.form.get('finish_time')
         group = request.form.get('group')
@@ -874,17 +909,18 @@ def upload_excel():
 
             # Update database
             updated_count, errors = update_database(
-                records, 
-                session_number, 
-                quiz_mark, 
-                finish_time, 
-                group, 
+                records,
+                session_number,
+                quiz_mark,
+                finish_time,
+                group,
                 is_general_exam,
                 lecture_name,
                 exam_name,
                 has_exam_grade,
                 has_payment,
-                has_time
+                has_time,
+                month_param
             )
             
             # Clean up uploaded file
@@ -932,6 +968,56 @@ def get_groups():
 def get_sessions():
     """Get list of available session numbers"""
     return jsonify({'sessions': ALLOWED_SESSIONS}), 200
+
+
+@app.route('/api/parent/sessions/months', methods=['GET'])
+def get_parent_months():
+    """Return available months for a parent's student sessions (distinct months present)
+    Query params: phone_number (required), student_name (optional)
+    """
+    phone = request.args.get('phone_number')
+    student_name = request.args.get('student_name')
+    if not phone:
+        return jsonify({'error': 'phone_number query parameter required'}), 400
+    phone = normalize_phone(phone)
+    try:
+        query = supabase.table('session_records').select('month', 'finish_time', 'start_time', 'created_at').eq('parent_no', phone)
+        if student_name:
+            query = query.eq('student_name', student_name)
+        res = query.execute()
+        records = res.data or []
+
+        months_set = set()
+        for r in records:
+            try:
+                m = r.get('month')
+                if m is not None:
+                    # ensure int
+                    try:
+                        months_set.add(int(m))
+                        continue
+                    except Exception:
+                        pass
+
+                # If month is missing or invalid, try deriving from finish_time or start_time
+                # (do NOT derive from created_at — upload timestamp can cause unrelated months to appear)
+                for dkey in ('finish_time', 'start_time'):
+                    val = r.get(dkey)
+                    if val:
+                        try:
+                            dt = date_parser.parse(str(val))
+                            months_set.add(int(dt.month))
+                            break
+                        except Exception:
+                            continue
+            except Exception:
+                continue
+
+        months = sorted(list(months_set))
+        return jsonify({'months': months}), 200
+    except Exception as e:
+        logger.exception(f"Error fetching parent months: {str(e)}")
+        return jsonify({'error': f'Error fetching months: {str(e)}'}), 500
 
 
 @app.route('/api/parent/students', methods=['GET'])
@@ -1010,7 +1096,9 @@ def get_parent_students():
             quizzes_avg = round((v['quiz_sum'] / v['quiz_count']), 2) if v['quiz_count'] > 0 else 0
 
             students.append({
-                'id': v['parent_no'],  # Use parent_no as stable ID
+                # Use the first known student_id as the student id; fall back to parent_no
+                'id': (list(v['ids'])[0] if v['ids'] else v['parent_no']),
+                'parent_no': v['parent_no'],
                 'name': v['name'],
                 'grade': v.get('grade', ''),
                 'attendance': attendance_pct,
@@ -1028,14 +1116,48 @@ def get_parent_students():
 def get_parent_sessions():
     """Return session records for a parent with proper boolean handling"""
     phone = request.args.get('phone_number')
+    student_name = request.args.get('student_name')  # ✅ ADD THIS LINE
+    
     if not phone:
         return jsonify({'error': 'phone_number query parameter required'}), 400
     phone = normalize_phone(phone)
 
+    # Optional filters
+    student_id = request.args.get('student_id')
+    month_param = request.args.get('month')
+
+    # Log incoming request parameters for debugging
+    logger.info(f"/api/parent/sessions called with phone={phone}, student_id={student_id}, month={month_param}, raw_args={dict(request.args)}")
+
     try:
         query = supabase.table('session_records').select('*').eq('parent_no', phone)
+
+        # ✅ ADD THIS FILTER
+        if student_name:
+            query = query.eq('student_name', student_name)
+        # Optional month filter
+        if month_param:
+            try:
+                month_int = int(month_param)
+                query = query.eq('month', month_int)
+            except Exception:
+                pass
+            
         result = query.execute()
         records = result.data or []
+        if student_name:
+            logger.info(f"Filtered sessions for parent {phone}, student {student_name}: {len(records)} sessions")
+        else:
+            logger.info(f"All sessions for parent {phone}: {len(records)} sessions")
+        
+        
+
+        # Log query result size and months present (helpful to detect missing month values)
+        try:
+            months = sorted(list({r.get('month') for r in records if r.get('month') is not None}))
+        except Exception:
+            months = []
+        logger.info(f"/api/parent/sessions result: {len(records)} records, months_present={months}")
 
         sessions = []
         for r in records:
@@ -1126,7 +1248,17 @@ def get_parent_sessions():
 def get_all_students():
     """Return aggregated student list across all parents (for admin)"""
     try:
-        result = supabase.table('session_records').select('*').execute()
+        # Allow optional month filtering for admin analytics
+        month_param = request.args.get('month')
+        query = supabase.table('session_records').select('*')
+        if month_param:
+            try:
+                month_int = int(month_param)
+                query = query.eq('month', month_int)
+            except Exception:
+                # ignore invalid month parameter and fetch all
+                pass
+        result = query.execute()
         records = result.data or []
 
         students_map = {}

@@ -1,6 +1,6 @@
 // Circuit pattern background
 .circuit-pattern {
-  background-image: 
+  background-image:
     linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
     linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
   background-size: 50px 50px;
@@ -12,6 +12,14 @@
 
 .physics-ambient {
   overflow: hidden;
+
+  /* Hide scrollbars */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* ⚡ Lightning Bolts - Blue Theme */
@@ -172,79 +180,99 @@
 /* ============================= */
 
 @keyframes lightningStrike {
-  0%, 96%, 100% { 
+
+  0%,
+  96%,
+  100% {
     opacity: 0;
     transform: scale(2.8) translateY(0);
   }
-  97% { 
+
+  97% {
     opacity: 1;
     transform: scale(2.8) translateY(-3px);
   }
-  97.5% { 
+
+  97.5% {
     opacity: 1;
     transform: scale(2.8) translateY(0);
   }
-  98% { 
+
+  98% {
     opacity: 0;
     transform: scale(2.8) translateY(0);
   }
-  98.5% { 
+
+  98.5% {
     opacity: 0.9;
     transform: scale(2.8) translateY(-2px);
   }
-  99% { 
+
+  99% {
     opacity: 0;
     transform: scale(2.8) translateY(0);
   }
 }
 
 @keyframes formulaFloat {
-  0% { 
+  0% {
     opacity: 0;
     transform: translateY(0) translateX(0) scale(1);
   }
+
   10% {
     opacity: 0.5;
   }
-  20% { 
+
+  20% {
     transform: translateY(-25px) translateX(12px) scale(1.05);
     opacity: 0.6;
   }
-  40% { 
+
+  40% {
     transform: translateY(-45px) translateX(-8px) scale(1);
     opacity: 0.55;
   }
-  60% { 
+
+  60% {
     transform: translateY(-30px) translateX(15px) scale(1.03);
     opacity: 0.6;
   }
-  80% { 
+
+  80% {
     transform: translateY(-15px) translateX(-5px) scale(1);
     opacity: 0.5;
   }
+
   90% {
     opacity: 0.3;
   }
-  100% { 
+
+  100% {
     opacity: 0;
     transform: translateY(0) translateX(0) scale(1);
   }
 }
 
 @keyframes componentFloat {
-  0%, 100% { 
+
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
     opacity: 0.3;
   }
-  25% { 
+
+  25% {
     transform: translateY(-15px) rotate(5deg);
     opacity: 0.5;
   }
-  50% { 
+
+  50% {
     transform: translateY(-25px) rotate(-3deg);
     opacity: 0.6;
   }
-  75% { 
+
+  75% {
     transform: translateY(-12px) rotate(4deg);
     opacity: 0.4;
   }
@@ -252,49 +280,58 @@
 
 // Custom Animations
 @keyframes gradient-shift {
-  0%, 100% { 
-    background-position: 0% 50%; 
+
+  0%,
+  100% {
+    background-position: 0% 50%;
   }
-  50% { 
-    background-position: 100% 50%; 
+
+  50% {
+    background-position: 100% 50%;
   }
 }
 
 @keyframes gradient-rotate {
-  0% { 
-    transform: rotate(0deg); 
+  0% {
+    transform: rotate(0deg);
   }
-  100% { 
-    transform: rotate(360deg); 
+
+  100% {
+    transform: rotate(360deg);
   }
 }
 
 @keyframes spin-slow {
-  from { 
-    transform: rotate(0deg); 
+  from {
+    transform: rotate(0deg);
   }
-  to { 
-    transform: rotate(360deg); 
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
 @keyframes bounce-slow {
-  0%, 100% { 
-    transform: translateY(0); 
+
+  0%,
+  100% {
+    transform: translateY(0);
   }
-  50% { 
-    transform: translateY(-10px); 
+
+  50% {
+    transform: translateY(-10px);
   }
 }
 
 @keyframes fadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(-20px); 
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -328,22 +365,22 @@
 // Lucide icon sizing
 lucide-angular {
   display: inline-block;
-  
+
   &.size-4 {
     width: 1rem;
     height: 1rem;
   }
-  
+
   &.size-5 {
     width: 1.25rem;
     height: 1.25rem;
   }
-  
+
   &.size-8 {
     width: 2rem;
     height: 2rem;
   }
-  
+
   &.size-12 {
     width: 3rem;
     height: 3rem;
@@ -363,4 +400,1005 @@ lucide-angular,
 .floater,
 .formula {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CRITICAL: ELIMINATE ALL SCROLLING
+   ============================================ */
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Nuclear option - hide ALL scrollbars everywhere */
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  box-sizing: border-box !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Prevent overflow on all elements */
+* {
+  max-width: 100%;
+}
+
+/* Fix Angular root component */
+app-root {
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+}
+
+/* ============================================
+   MAIN CONTAINER - NO SCROLL VERSION
+   ============================================ */
+.min-h-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Background layers */
+.absolute.inset-0,
+.fixed.inset-0 {
+  overflow: hidden !important;
+}
+
+/* ============================================
+   RESPONSIVE CARD SIZING
+   ============================================ */
+
+/* Login card container - scale to fit screen */
+.max-w-6xl {
+  width: 100%;
+  max-width: 90vw;
+  max-height: 95vh;
+}
+
+/* Card with scrollable content */
+.max-h-\[90vh\] {
+  max-height: 85vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Optional: Hide card scrollbar but keep functionality */
+.max-h-\[90vh\]::-webkit-scrollbar {
+  width: 0px !important;
+  display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Extra Small Mobile (320px - 374px) */
+@media (max-width: 374px) {
+  .max-w-6xl {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .max-h-\[90vh\] {
+    max-height: 90vh !important;
+    padding: 0.75rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.125rem !important;
+  }
+
+  .text-4xl {
+    font-size: 1.5rem !important;
+  }
+
+  img[alt="Logo"] {
+    width: 70px !important;
+    height: 70px !important;
+  }
+
+  .space-y-4,
+  .space-y-5 {
+    gap: 0.5rem !important;
+  }
+
+  button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 13px !important;
+  }
+
+  input {
+    padding: 0.6rem 0.75rem !important;
+    font-size: 14px !important;
+  }
+}
+
+/* Small Mobile (375px - 480px) */
+@media (min-width: 375px) and (max-width: 480px) {
+  .max-w-6xl {
+    max-width: 92vw;
+    max-height: 95vh;
+  }
+
+  .max-h-\[90vh\] {
+    max-height: 88vh !important;
+    padding: 1rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-4xl {
+    font-size: 1.75rem !important;
+  }
+
+  img[alt="Logo"] {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  .space-y-4 {
+    gap: 0.75rem !important;
+  }
+
+  .space-y-5 {
+    gap: 0.875rem !important;
+  }
+}
+
+/* Mobile Landscape & Small Tablets (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .max-w-6xl {
+    max-width: 85vw;
+    max-height: 90vh;
+  }
+
+  .max-h-\[90vh\] {
+    max-height: 85vh !important;
+  }
+
+  .grid.md\\:grid-cols-2 > div:first-child {
+    display: none !important;
+  }
+}
+
+/* Tablets (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .max-w-6xl {
+    max-width: 80vw;
+    max-height: 90vh;
+  }
+
+  .grid.md\\:grid-cols-2 {
+    grid-template-columns: 0.8fr 1.2fr !important;
+    gap: 2rem !important;
+  }
+
+  /* Scale down hero content */
+  .text-4xl {
+    font-size: 2rem !important;
+  }
+
+  img[alt="Logo"]:not(.w-32) {
+    width: 80px !important;
+    height: 80px !important;
+  }
+}
+
+/* Small Laptops (1025px - 1366px) */
+@media (min-width: 1025px) and (max-width: 1366px) {
+  .max-w-6xl {
+    max-width: 75vw;
+    max-height: 85vh;
+  }
+
+  .grid.md\\:grid-cols-2 {
+    gap: 2.5rem !important;
+  }
+}
+
+/* Standard Desktop (1367px - 1920px) */
+@media (min-width: 1367px) and (max-width: 1920px) {
+  .max-w-6xl {
+    max-width: 70vw;
+    max-height: 85vh;
+  }
+
+  .grid.md\\:grid-cols-2 {
+    gap: 3rem !important;
+  }
+}
+
+/* Large Desktop & 4K (1921px+) */
+@media (min-width: 1921px) {
+  .max-w-6xl {
+    max-width: 1600px;
+    max-height: 80vh;
+  }
+
+  .grid.md\\:grid-cols-2 {
+    gap: 4rem !important;
+  }
+
+  body {
+    font-size: 18px;
+  }
+}
+
+/* ============================================
+   LANDSCAPE MOBILE OPTIMIZATION
+   ============================================ */
+@media (max-height: 600px) and (orientation: landscape) {
+  .max-w-6xl {
+    max-height: 98vh !important;
+  }
+
+  .max-h-\[90vh\] {
+    max-height: 92vh !important;
+    padding: 0.75rem !important;
+  }
+
+  .space-y-4,
+  .space-y-5,
+  .space-y-6,
+  .space-y-8 {
+    gap: 0.5rem !important;
+  }
+
+  .mb-4,
+  .mb-6 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .py-3 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  img[alt="Logo"] {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .text-2xl {
+    font-size: 1rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* ============================================
+   PHYSICS BACKGROUND RESPONSIVE
+   ============================================ */
+
+/* Hide physics elements on small screens for performance */
+@media (max-width: 768px) {
+  .physics-ambient {
+    opacity: 0.2 !important;
+  }
+
+  .lightning-bolt,
+  .component-icon,
+  .formula {
+    display: none !important;
+  }
+
+  .circuit-pattern {
+    opacity: 0.1 !important;
+    background-size: 30px 30px !important;
+  }
+}
+
+/* Show reduced physics on tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .physics-ambient {
+    opacity: 0.4 !important;
+  }
+
+  .lightning-bolt:nth-child(n+3),
+  .component-icon:nth-child(n+4),
+  .formula:nth-child(n+4) {
+    display: none !important;
+  }
+}
+
+/* Full physics on desktop */
+@media (min-width: 1025px) {
+  .physics-ambient {
+    opacity: 1 !important;
+  }
+}
+
+/* ============================================
+   FORM & INPUT OPTIMIZATION
+   ============================================ */
+
+/* Prevent zoom on iOS when focusing inputs */
+@media (max-width: 768px) {
+  input[type="tel"],
+  input[type="text"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch-friendly targets */
+  button,
+  input[type="checkbox"],
+  label[for] {
+    min-height: 44px;
+  }
+}
+
+/* ============================================
+   GRID LAYOUT FIXES
+   ============================================ */
+
+/* Mobile - hide hero section */
+@media (max-width: 768px) {
+  .grid.md\\:grid-cols-2 > div:first-child {
+    display: none !important;
+  }
+
+  .grid.md\\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .max-w-md {
+    max-width: 100% !important;
+  }
+}
+
+/* Tablet and up - show hero */
+@media (min-width: 769px) {
+  .grid.md\\:grid-cols-2 {
+    display: grid !important;
+  }
+}
+
+/* ============================================
+   SAFE AREA INSETS (Notches, Camera Cutouts)
+   ============================================ */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    padding-left: env(safe-area-inset-left) !important;
+    padding-right: env(safe-area-inset-right) !important;
+  }
+
+  .min-h-screen {
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ============================================
+   PREVENT CONTENT OVERFLOW
+   ============================================ */
+
+/* Ensure no element extends beyond viewport */
+.p-4,
+.p-6,
+.p-8,
+.px-4,
+.px-6,
+.px-8,
+.py-4,
+.py-6,
+.py-8 {
+  max-width: 100% !important;
+}
+
+/* Prevent text overflow */
+h1,
+h2,
+h3,
+p,
+label,
+span {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* GPU acceleration */
+.animate-gradient-shift,
+.animate-gradient-rotate,
+.animate-pulse,
+.animate-bounce-slow,
+.animate-spin-slow {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   BROWSER-SPECIFIC FIXES
+   ============================================ */
+
+/* Safari iOS - prevent zoom and bounce */
+@media (max-width: 768px) {
+  * {
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  body {
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Firefox scrollbar hiding */
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: none !important;
+  }
+}
+
+/* Edge backdrop blur fallback */
+@supports not (backdrop-filter: blur(1px)) {
+  .backdrop-blur-xl,
+  .backdrop-blur-sm {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Force elements to fit viewport */
+.fit-viewport {
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Responsive text sizing */
+.text-responsive {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.heading-responsive {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Focus styles for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid #4FD1C5;
+  outline-offset: 2px;
+}
+
+/* High contrast mode */
+
+
+
+/* ============================================
+   CIRCUIT PATTERN & ANIMATIONS
+   ============================================ */
+
+.circuit-pattern {
+  background-image:
+    linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes gradient-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+.animate-gradient-rotate {
+  animation: gradient-rotate 8s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+  .physics-ambient,
+  .animate-gradient-shift,
+  .lightning-bolt,
+  .formula,
+  .component-icon,
+  button[title="Go back"],
+  button[title="Toggle language"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+}
+
+/* ============================= */
+/* PHYSICS AMBIENCE - NO SCROLL */
+/* ============================= */
+
+.physics-ambient {
+  overflow: hidden !important;
+  position: fixed !important;
+  pointer-events: none !important;
+
+  /* Hide scrollbars */
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+  }
+
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* ⚡ Lightning Bolts - Responsive Positioning */
+.lightning-bolt {
+  position: fixed;
+  opacity: 0;
+  filter: drop-shadow(0 0 15px currentColor);
+  animation: lightningStrike 5s infinite;
+  pointer-events: none;
+}
+
+.bolt-1 {
+  top: 8%;
+  left: 12%;
+  animation-delay: 0s;
+  color: #4FD1C5;
+}
+
+.bolt-2 {
+  top: 65%;
+  left: 8%;
+  animation-delay: 1.25s;
+  color: #667EEA;
+}
+
+.bolt-3 {
+  top: 25%;
+  right: 10%;
+  animation-delay: 2.5s;
+  color: #9F7AEA;
+}
+
+.bolt-4 {
+  bottom: 15%;
+  right: 12%;
+  animation-delay: 3.75s;
+  color: #4FD1C5;
+}
+
+/* 📐 Floating Formulas - Responsive */
+.formula {
+  position: fixed;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 600;
+  opacity: 0;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 15px rgba(79, 209, 197, 0.6);
+  animation: formulaFloat 25s ease-in-out infinite;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Responsive formula sizes */
+@media (max-width: 1024px) {
+  .formula {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .formula {
+    font-size: 0.9rem;
+  }
+}
+
+/* Individual formula positions */
+.formula-emf {
+  top: 5%;
+  left: 5%;
+  animation-delay: 0s;
+}
+
+.formula-ohm {
+  top: 48%;
+  left: 6%;
+  animation-delay: 2s;
+}
+
+.formula-power {
+  top: 62%;
+  left: 4%;
+  animation-delay: 0s;
+}
+
+.formula-capacitor {
+  top: 78%;
+  left: 7%;
+  animation-delay: 4s;
+}
+
+.formula-inductor {
+  bottom: 8%;
+  left: 5%;
+  animation-delay: 8s;
+}
+
+.formula-einstein {
+  top: 52%;
+  right: 4%;
+  animation-delay: 0s;
+}
+
+/* 🔌 Component Icons - Responsive */
+.component-icon {
+  position: fixed;
+  opacity: 0.4;
+  filter: drop-shadow(0 0 8px currentColor);
+  animation: componentFloat 20s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Responsive icon sizes */
+@media (max-width: 1024px) {
+  .component-icon {
+    transform: scale(0.8);
+  }
+}
+
+@media (max-width: 768px) {
+  .component-icon {
+    transform: scale(0.6);
+  }
+}
+
+.solenoid-icon {
+  top: 12%;
+  left: 15%;
+  animation-delay: 0s;
+  color: #4FD1C5;
+}
+
+.capacitor-icon {
+  top: 45%;
+  left: 10%;
+  animation-delay: 4s;
+  color: #667EEA;
+}
+
+.diode-icon {
+  bottom: 25%;
+  left: 12%;
+  animation-delay: 8s;
+  color: #9F7AEA;
+}
+
+.transistor-icon {
+  top: 70%;
+  left: 8%;
+  animation-delay: 12s;
+  color: #ED64A6;
+}
+
+.magnet-icon {
+  top: 18%;
+  right: 15%;
+  animation-delay: 2s;
+}
+
+.resistor-icon {
+  top: 50%;
+  right: 12%;
+  animation-delay: 6s;
+  color: #F6AD55;
+}
+
+.inductor-icon {
+  bottom: 20%;
+  right: 14%;
+  animation-delay: 10s;
+  color: #68D391;
+}
+
+/* ============================= */
+/* ANIMATIONS */
+/* ============================= */
+
+@keyframes lightningStrike {
+  0%,
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(2.8) translateY(0);
+  }
+
+  97% {
+    opacity: 1;
+    transform: scale(2.8) translateY(-3px);
+  }
+
+  97.5% {
+    opacity: 1;
+    transform: scale(2.8) translateY(0);
+  }
+
+  98% {
+    opacity: 0;
+    transform: scale(2.8) translateY(0);
+  }
+
+  98.5% {
+    opacity: 0.9;
+    transform: scale(2.8) translateY(-2px);
+  }
+
+  99% {
+    opacity: 0;
+    transform: scale(2.8) translateY(0);
+  }
+}
+
+@keyframes formulaFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+
+  10% {
+    opacity: 0.5;
+  }
+
+  20% {
+    transform: translateY(-25px) translateX(12px) scale(1.05);
+    opacity: 0.6;
+  }
+
+  40% {
+    transform: translateY(-45px) translateX(-8px) scale(1);
+    opacity: 0.55;
+  }
+
+  60% {
+    transform: translateY(-30px) translateX(15px) scale(1.03);
+    opacity: 0.6;
+  }
+
+  80% {
+    transform: translateY(-15px) translateX(-5px) scale(1);
+    opacity: 0.5;
+  }
+
+  90% {
+    opacity: 0.3;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+}
+
+@keyframes componentFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.3;
+  }
+
+  25% {
+    transform: translateY(-15px) rotate(5deg);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: translateY(-25px) rotate(-3deg);
+    opacity: 0.6;
+  }
+
+  75% {
+    transform: translateY(-12px) rotate(4deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 1s ease-in;
+}
+
+/* ============================= */
+/* LUCIDE ICON SIZING */
+/* ============================= */
+
+lucide-angular {
+  display: inline-block;
+
+  &.size-4 {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &.size-5 {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  &.size-6 {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &.size-8 {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  &.size-12 {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+/* ============================= */
+/* GROUP VARIANTS */
+/* ============================= */
+
+.group:focus-within .group-focus-within\:w-full {
+  width: 100%;
+}
+
+/* ============================= */
+/* USER EXPERIENCE */
+/* ============================= */
+
+/* Prevent text selection on interactive elements */
+button,
+.cursor-default {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+/* Smooth transitions */
+button,
+input,
+lucide-angular,
+.formula,
+.lightning-bolt,
+.component-icon {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent element overflow */
+svg {
+  overflow: visible;
+  max-width: 100%;
+  height: auto;
 }

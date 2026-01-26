@@ -27,6 +27,8 @@
           <lucide-angular [img]="Settings" class="btn-icon"></lucide-angular>
         </button>
 
+
+
         <button class="lang-btn" title="Toggle language" (click)="toggleLanguage()">
           {{ lang() === 'en' ? 'ع/AR' : 'EN' }}
         </button>
@@ -80,12 +82,14 @@
           <select id="student-select" class="student-select" [(ngModel)]="selectedStudentCombinedId"
             (ngModelChange)="onStudentChange($event)">
             <option *ngFor="let student of uniqueStudents()" [value]="student.combinedId">
-              {{ student.name }} 
+              {{ student.name }}
             </option>
           </select>
           <lucide-angular [img]="ChevronDown" class="select-arrow"></lucide-angular>
         </div>
       </div>
+
+
 
       <!-- Loading State for Students -->
       <div *ngIf="isLoadingStudents()" class="flex items-center justify-center py-16">
@@ -96,12 +100,10 @@
       </div>
 
       <!-- No Students Available -->
-      <app-no-data 
-        *ngIf="!hasStudentData() && !isLoadingStudents()"
+      <app-no-data *ngIf="!hasStudentData() && !isLoadingStudents()"
         [title]="lang() === 'en' ? 'No Student Data Available' : 'لا توجد بيانات طالب متاحة'"
         [message]="lang() === 'en' ? 'We couldn\'t find any student information for your account. Please contact support.' : 'لم نتمكن من العثور على أي معلومات طالب لحسابك. يرجى الاتصال بالدعم.'"
-        [showRefreshButton]="true"
-        [onRefreshCallback]="loadStudents.bind(this)">
+        [showRefreshButton]="true" [onRefreshCallback]="loadStudents.bind(this)">
       </app-no-data>
 
       <div *ngIf="selectedStudent() && !isLoadingStudents()">
@@ -119,10 +121,10 @@
                 </span>
                 <span class="student-grade">{{ selectedStudent()!.grade }}</span>
               </div>
-              <div class="hero-stats-pills">
+             <div class="hero-stats-pills">
                 <span class="stat-pill">
                   <lucide-angular [img]="Calendar" class="pill-icon"></lucide-angular>
-                  {{ sessionCount() }} {{ sessionCount() === 1 ? (lang() === 'en' ? 'Session' : 'جلسة') : (lang() === 'en' ? 'Sessions' : 'جلسات') }}
+                  {{ attendedCount() }} {{ attendedCount() === 1 ? (lang() === 'en' ? 'Session Attended' : 'جلسة حضرت') : (lang() === 'en' ? 'Sessions Attended' : 'جلسات حضرت') }}
                 </span>
                 <span class="stat-pill" *ngIf="selectedStudent()!.ids.length > 1">
                   <lucide-angular [img]="Users" class="pill-icon"></lucide-angular>
@@ -160,7 +162,8 @@
           <div class="shamel-section shamel-current">
             <div class="section-header">
               <lucide-angular [img]="Trophy" class="header-icon"></lucide-angular>
-              <span class="header-label">{{ lang() === 'en' ? 'GENERAL EXAM RESULT (SHAMEL)' : 'نتيجة الامتحان العام (الشامل)' }}</span>
+              <span class="header-label">{{ lang() === 'en' ? 'GENERAL EXAM RESULT (SHAMEL)' : 'نتيجة الامتحان العام
+                (الشامل)' }}</span>
               <span class="date-badge">{{ lang() === 'en' ? 'Attended' : 'حضر' }} ✓</span>
             </div>
             <div class="shamel-grade-display">
@@ -169,17 +172,25 @@
                 <span class="grade-separator">/</span>
                 <span class="grade-total">{{ getCurrentShamel().total }}</span>
               </div>
-              <p class="grade-subtitle">{{ getCurrentShamel().label || (lang() === 'en' ? 'Comprehensive Assessment' : 'التقييم الشامل') }}</p>
+              <p class="grade-subtitle">{{ getCurrentShamel().label || (lang() === 'en' ? 'Comprehensive Assessment' :
+                'التقييم الشامل') }}</p>
             </div>
-            <div class="circular-progress">
-              <svg viewBox="0 0 140 140" class="progress-svg">
-                <circle cx="70" cy="70" r="60" class="progress-bg"></circle>
-                <circle cx="70" cy="70" r="60" class="progress-fill"
-                  [style.stroke-dashoffset]="(getCurrentShamel().total ? (377 - (377 * (getCurrentShamel().score / getCurrentShamel().total))) : 377)">
-                </circle>
-              </svg>
-              <div class="progress-text">{{ getCurrentShamel().total ? (Math.round((getCurrentShamel().score / getCurrentShamel().total) * 100) + '%') : '0%' }}</div>
-            </div>
+          <div class="shamel-percentage-icon">
+  <svg viewBox="0 0 120 120" class="ring-svg-center">
+    <circle cx="60" cy="60" r="50" class="ring-bg"></circle>
+    <circle
+      cx="60"
+      cy="60"
+      r="50"
+      class="ring-fill attendance-ring"
+      [style.stroke-dashoffset]="314 - (314 * (getCurrentShamel().score / getCurrentShamel().total))">
+    </circle>
+  </svg>
+  <div class="ring-percentage">
+    {{ Math.round((getCurrentShamel().score / getCurrentShamel().total) * 100) }}%
+  </div>
+</div>
+
           </div>
         </div>
 
@@ -196,7 +207,8 @@
             </div>
             <div class="stat-main">
               <p class="stat-value">{{ getAttendancePercentage() }}%</p>
-              <p class="stat-detail">{{ attendedCount() }}/{{ sessionCount() }} {{ lang() === 'en' ? 'sessions' : 'جلسات' }}</p>
+              <p class="stat-detail">{{ attendedCount() }}/{{ sessionCount() }} {{ lang() === 'en' ? 'sessions' :
+                'جلسات' }}</p>
             </div>
             <div class="stat-visual-center">
               <svg viewBox="0 0 120 120" class="ring-svg-center">
@@ -220,37 +232,39 @@
               <p class="stat-value payment-value">{{ getTotalPayment() }}</p>
               <p class="stat-detail">EGP</p>
             </div>
-            <div class="stat-visual-center payment-visual">
-              
-            </div>
+           <div class="stat-visual-center payment-visual">
+  <div class="payment-icon-pattern">
+    <span class="dollar-icon">$</span>
+    <span class="dollar-icon">$</span>
+    <span class="dollar-icon">$</span>
+  </div>
+</div>
           </div>
 
-          <!-- Quiz Performance Card -->
-          <div class="stat-card quiz-card">
-            <div class="stat-card-header">
-              <div class="stat-icon-wrapper quiz-icon">
-                <lucide-angular [img]="GraduationCap" class="stat-icon"></lucide-angular>
-              </div>
-              <p class="stat-label">{{ lang() === 'en' ? 'QUIZ PERFORMANCE' : 'أداء الاختبار' }}</p>
-            </div>
-            <div class="stat-main">
-              <p class="stat-value">{{ getQuizPerformance() }}%</p>
-              <p class="stat-detail">{{ getQuizDetails().correct }}/{{ getQuizDetails().total }} {{ lang() === 'en' ? 'correct' : 'صحيح' }}</p>
-            </div>
-            <div class="stat-visual-center">
-              <div class="bar-chart-center">
-                <div class="bar-wrapper">
-                  <div class="bar" [style.height.%]="getQuizPerformance()"></div>
-                </div>
-                <div class="bar-wrapper">
-                  <div class="bar" [style.height.%]="getQuizPerformance() * 0.85"></div>
-                </div>
-                <div class="bar-wrapper">
-                  <div class="bar" [style.height.%]="getQuizPerformance() * 0.7"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+          
+     <!-- Quiz Performance Card -->
+<div class="stat-card quiz-card">
+  <div class="stat-card-header">
+    <div class="stat-icon-wrapper quiz-icon">
+      <lucide-angular [img]="GraduationCap" class="stat-icon"></lucide-angular>
+    </div>
+    <p class="stat-label">{{ lang() === 'en' ? 'QUIZ PERFORMANCE' : 'أداء الاختبار' }}</p>
+  </div>
+  <div class="stat-main">
+    <p class="stat-value">{{ getQuizPerformance() }}%</p>
+    <p class="stat-detail">{{ getQuizDetails().correct }}/{{ getQuizDetails().total }} {{ lang() === 'en' ? 'correct' : 'صحيح' }}</p>
+  </div>
+  <div class="stat-visual-center">
+    <div class="quiz-visual-pattern">
+      <div class="brain-icon">🧠</div>
+      <div class="sparkle"></div>
+      <div class="sparkle"></div>
+      <div class="sparkle"></div>
+      <div class="sparkle"></div>
+    </div>
+  </div>
+</div>
+          
         </div>
 
         <!-- Session History Section -->
@@ -260,9 +274,30 @@
               <lucide-angular [img]="BookOpen" class="title-icon"></lucide-angular>
               <div>
                 <h3 class="section-title">{{ lang() === 'en' ? 'Session History' : 'سجل الجلسات' }}</h3>
-                <p class="section-subtitle">{{ lang() === 'en' ? 'Detailed record of all physics sessions' : 'سجل مفصل لجميع جلسات الفيزياء' }}</p>
+                <p class="section-subtitle">{{ lang() === 'en' ? 'Detailed record of all physics sessions' : 'سجل مفصل
+                  لجميع جلسات الفيزياء' }}</p>
               </div>
             </div>
+          </div>
+
+          <!-- Session Filter (always visible above sessions) -->
+          <div class="session-filter" style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+            <label class="selector-label" style="margin-right:6px;">{{ lang() === 'en' ? 'Month' : 'الشهر' }}</label>
+            <select class="month-select" [ngModel]="selectedMonth()" (ngModelChange)="selectedMonth.set($event)"
+              [disabled]="availableMonths().length === 0 || isLoadingSessions()"
+              style="min-width:140px;padding:6px;border-radius:6px;border:1px solid rgba(0,0,0,0.08);">
+              @if (availableMonths().length > 0) {
+                @for (m of availableMonths(); track m) {
+                <option [ngValue]="m">{{ lang() === 'en' ? ('Month ' + m) : ('الشهر ' + m) }}</option>
+                }
+              } @else {
+                <option disabled>{{ lang() === 'en' ? 'No months available' : 'لا توجد أشهر' }}</option>
+              }
+            </select>
+            <button type="button" class="btn btn-primary" (click)="applyMonthFilter()"
+              style="padding:8px 12px;border-radius:8px;">{{ lang() === 'en' ? 'Filter' : 'تصفية' }}</button>
+            <button type="button" class="btn btn-secondary" (click)="(selectedMonth.set(null)); applyMonthFilter()"
+              style="padding:8px 12px;border-radius:8px;">{{ lang() === 'en' ? 'All' : 'الكل' }}</button>
           </div>
 
           <!-- Loading State for Sessions -->
@@ -274,12 +309,10 @@
           </div>
 
           <!-- No Sessions Available -->
-          <app-no-data 
-            *ngIf="!hasSessionData() && !isLoadingSessions()"
+          <app-no-data *ngIf="!hasSessionData() && !isLoadingSessions()"
             [title]="lang() === 'en' ? 'No Sessions Available' : 'لا توجد جلسات متاحة'"
             [message]="lang() === 'en' ? 'No session data has been uploaded yet. Please check back later or contact your instructor.' : 'لم يتم تحميل بيانات الجلسة بعد. يرجى التحقق مرة أخرى في وقت لاحق أو الاتصال بمدرسك.'"
-            [showRefreshButton]="true"
-            [onRefreshCallback]="refreshData.bind(this)">
+            [showRefreshButton]="true" [onRefreshCallback]="refreshData.bind(this)">
           </app-no-data>
 
           <!-- Session Cards Carousel - Only show if we have sessions -->
@@ -289,98 +322,92 @@
             </button>
 
             <div class="session-cards" #sessionCarousel>
-              <div *ngFor="let session of sessions()" class="session-card" [class.general-exam-card]="isGeneralExamSession(session)">
-                
-                <!-- Session Header -->
-                <div class="session-header">
-                  <div class="session-icon-wrapper" [class.general-exam-icon]="isGeneralExamSession(session)">
-                    <lucide-angular [img]="isGeneralExamSession(session) ? Trophy : Zap" class="session-icon"></lucide-angular>
-                  </div>
-                  <div class="session-title-group">
-                    <h4 class="session-title">
-                      <span *ngIf="isGeneralExamSession(session)" class="exam-badge">🏆 {{ lang() === 'en' ? 'GENERAL EXAM' : 'امتحان عام' }}</span>
-                      {{ session.lectureName || ('Session #' + session.id + ' • Chapter ' + session.chapter) }}
-                    </h4>
-                    <p class="session-topic">{{ session.name }}</p>
-                  </div>
-                  <span class="status-badge" [ngClass]="session.attendance">
-                    <span class="badge-dot"></span>
-                    {{ session.attendance === 'attended' ? (lang() === 'en' ? 'Attended' : 'حضر') : session.attendance === 'upcoming' ? (lang() === 'en' ? 'Upcoming' : 'قادم') : (lang() === 'en' ? 'Missed' : 'غائب') }}
-                  </span>
-                </div>
+             <div *ngFor="let session of sessions()" class="session-card" [class.general-exam-card]="isGeneralExamSession(session)">
+  
+  <!-- Session Header -->
+  <div class="session-header">
+    <div class="session-icon-wrapper" [class.general-exam-icon]="isGeneralExamSession(session)">
+      <lucide-angular [img]="isGeneralExamSession(session) ? Trophy : Zap" class="session-icon"></lucide-angular>
+    </div>
+    <div class="session-title-group">
+      <h4 class="session-title">
+        <span *ngIf="isGeneralExamSession(session)" class="exam-badge">🏆 {{ lang() === 'en' ? 'GENERAL EXAM' : 'امتحان عام' }}</span>
+        {{ session.lectureName || ('Session #' + session.id + ' • Chapter ' + session.chapter) }}
+      </h4>
+      <p class="session-topic">{{ session.name }}</p>
+    </div>
+    <span class="status-badge" [ngClass]="session.attendance">
+      <span class="badge-dot"></span>
+      {{ session.attendance === 'attended' ? (lang() === 'en' ? 'Attended' : 'حضر') : session.attendance === 'upcoming' ? (lang() === 'en' ? 'Upcoming' : 'قادم') : (lang() === 'en' ? 'Missed' : 'غائب') }}
+    </span>
+  </div>
 
-                <!-- Session Info Grid -->
-                <div class="session-info-grid">
-                  <div class="info-item">
-                    <div class="info-icon-wrapper">
-                      <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
-                    </div>
-                    <p class="info-label">{{ lang() === 'en' ? 'START TIME' : 'وقت البداية' }}</p>
-                    <div class="info-value">
-                      <div *ngIf="formatTimestamp(session.start_time || session.startTime) as st"
-                        style="background:#f59e0b;color:#000;padding:6px 10px;border-radius:6px;font-weight:700;display:inline-block;">
-                        {{ st }}
-                      </div>
-                      <div *ngIf="!(session.start_time || session.startTime)">-</div>
-                    </div>
-                  </div>
+  <!-- Session Info Grid -->
+  <div class="session-info-grid">
+    <div class="info-item">
+      <div class="info-icon-wrapper">
+        <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
+      </div>
+      <p class="info-label">{{ lang() === 'en' ? 'Attendance Time' : 'وقت الحضور' }}</p>
+      <div class="info-value">
+        <div *ngIf="formatTimestamp(session.start_time || session.startTime) as st" class="time-badge">
+          {{ st }}
+        </div>
+        <div *ngIf="!(session.start_time || session.startTime)">-</div>
+      </div>
+    </div>
 
-                  <div class="info-item">
-                    <div class="info-icon-wrapper">
-                      <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
-                    </div>
-                    <p class="info-label">{{ lang() === 'en' ? 'END TIME' : 'وقت الانتهاء' }}</p>
-                    <div class="info-value">
-                      <div *ngIf="formatTimestamp(session.endTime) as et"
-                        style="background:#f59e0b;color:#000;padding:6px 10px;border-radius:6px;font-weight:700;display:inline-block;">
-                        {{ et }}
-                      </div>
-                      <div *ngIf="!session.endTime">-</div>
-                    </div>
-                  </div>
+    <div class="info-item">
+      <div class="info-icon-wrapper">
+        <lucide-angular [img]="Clock" class="info-icon"></lucide-angular>
+      </div>
+      <p class="info-label">{{ lang() === 'en' ? 'END TIME' : 'وقت الانتهاء' }}</p>
+      <div class="info-value">
+        <div *ngIf="formatTimestamp(session.endTime) as et" class="time-badge">
+          {{ et }}
+        </div>
+        <div *ngIf="!session.endTime">-</div>
+      </div>
+    </div>
 
-                  <div class="info-item">
-                    <div class="info-icon-wrapper">
-                      <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
-                    </div>
-                    <p class="info-label">{{ lang() === 'en' ? 'QUIZ SCORE' : 'درجة الاختبار' }}</p>
-                    <p class="info-value">{{ session.quizCorrect }}/{{ session.adminQuizMark || session.quizTotal }}</p>
-                    <p class="info-sub">{{ lang() === 'en' ? 'questions' : 'أسئلة' }}</p>
-                  </div>
+    <div class="info-item">
+      <div class="info-icon-wrapper">
+        <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
+      </div>
+      <p class="info-label">{{ lang() === 'en' ? 'QUIZ SCORE' : 'درجة الاختبار' }}</p>
+      <p class="info-value">{{ session.quizCorrect }}/{{ session.adminQuizMark || session.quizTotal }}</p>
+      <p class="info-sub">{{ lang() === 'en' ? 'questions' : 'أسئلة' }}</p>
+    </div>
 
-                  <div class="info-item">
-                    <div class="info-icon-wrapper">
-                      <lucide-angular [img]="DollarSign" class="info-icon"></lucide-angular>
-                    </div>
-                    <p class="info-label">{{ lang() === 'en' ? 'PAYMENT' : 'الدفع' }}</p>
-                    <p class="info-value">{{ session.payment }} EGP</p>
-                  </div>
+    <div class="info-item">
+      <div class="info-icon-wrapper">
+        <lucide-angular [img]="DollarSign" class="info-icon"></lucide-angular>
+      </div>
+      <p class="info-label">{{ lang() === 'en' ? 'PAYMENT' : 'الدفع' }}</p>
+      <p class="info-value">{{ session.payment }} EGP</p>
+    </div>
 
-                  <div class="info-item" *ngIf="session.mark !== undefined">
-                    <div class="info-icon-wrapper">
-                      <lucide-angular [img]="Trophy" class="info-icon"></lucide-angular>
-                    </div>
-                    <p class="info-label">{{ lang() === 'en' ? 'MARK' : 'العلامة' }}</p>
-                    <p class="info-value">{{ session.mark }}</p>
-                  </div>
-                </div>
+    <div class="info-item" *ngIf="session.mark !== undefined">
+      <div class="info-icon-wrapper">
+        <lucide-angular [img]="Trophy" class="info-icon"></lucide-angular>
+      </div>
+      <p class="info-label">{{ lang() === 'en' ? 'MARK' : 'العلامة' }}</p>
+      <p class="info-value">{{ session.mark }}</p>
+    </div>
+  </div>
 
-                <!-- Homework Status -->
-                <div class="homework-status">
-                  <div class="homework-left">
-                    <lucide-angular [img]="FileText" class="homework-icon"></lucide-angular>
-                    <span class="homework-label">{{ lang() === 'en' ? 'Homework Status' : 'حالة الواجب' }}</span>
-                  </div>
-                  <span class="homework-badge" [ngClass]="session.homeworkStatus">
-                    {{ session.homeworkStatus === 'completed' ? (lang() === 'en' ? 'Completed' : 'مكتمل') : (lang() === 'en' ? 'Pending' : 'معلق') }}
-                  </span>
-                </div>
+  <!-- Homework Status -->
+  <div class="homework-status">
+    <div class="homework-left">
+      <lucide-angular [img]="FileText" class="homework-icon"></lucide-angular>
+      <span class="homework-label">{{ lang() === 'en' ? 'Homework Status' : 'حالة الواجب' }}</span>
+    </div>
+    <span class="homework-badge" [ngClass]="session.homeworkStatus">
+      {{ session.homeworkStatus === 'completed' ? (lang() === 'en' ? 'Completed' : 'مكتمل') : (lang() === 'en' ? 'Pending' : 'معلق') }}
+    </span>
+  </div>
 
-                <!-- Session Date -->
-                <div class="session-footer">
-                  <lucide-angular [img]="Calendar" class="footer-icon"></lucide-angular>
-                  <span class="session-date">{{ session.date }}</span>
-                </div>
+            
               </div>
             </div>
 

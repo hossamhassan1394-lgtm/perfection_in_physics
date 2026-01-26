@@ -7,7 +7,6 @@ import {
   LucideAngularModule,
   Eye,
   EyeOff,
-  Atom,
   Zap,
   Waves,
   CircuitBoard,
@@ -36,7 +35,6 @@ export class LoginComponent implements OnInit {
   // Lucide icons
   readonly Eye = Eye;
   readonly EyeOff = EyeOff;
-  readonly Atom = Atom;
   readonly Zap = Zap;
   readonly Waves = Waves;
   readonly CircuitBoard = CircuitBoard;
@@ -46,8 +44,8 @@ export class LoginComponent implements OnInit {
   readonly Copy = Copy;
   readonly ChevronLeft = ChevronLeft;
 
-  // Language signal
-  lang = signal<'en' | 'ar'>('en');
+  // Language signal - DEFAULT TO ARABIC
+  lang = signal<'en' | 'ar'>('ar');
 
   // Signals for reactive state
   showPassword = signal(false);
@@ -65,14 +63,20 @@ export class LoginComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    // Set Arabic as default
+    this.setLanguage('ar');
+    
     // Check if user is already logged in with "Remember Me"
     if (this.authService.isLoggedIn() && this.authService.isRememberMeEnabled()) {
-      console.log('✅ User has "Remember Me" enabled - auto-redirecting');
       this.redirectToDashboard();
-    } else {
-      // Clear any existing session if "Remember Me" is not enabled
-      console.log('📝 Login page loaded - Please sign in');
     }
+  }
+
+  // Helper method to set language and update DOM
+  private setLanguage(language: 'en' | 'ar'): void {
+    this.lang.set(language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   }
 
   redirectToDashboard(): void {
@@ -116,19 +120,12 @@ export class LoginComponent implements OnInit {
   }
 
   copyToClipboard(text: string): void {
-    navigator.clipboard.writeText(text).then(() => {
-      console.log('📋 Copied to clipboard:', text);
-    });
+    navigator.clipboard.writeText(text);
   }
 
   onSubmit(event: Event): void {
     event.preventDefault();
     this.loginError.set('');
-
-    console.log('🔐 Login attempt started');
-    console.log('   Phone/Username:', this.phoneNumber());
-    console.log('   User Type:', this.activeTab());
-    console.log('   Remember Me:', this.rememberMe());
 
     // Basic validation
     if (!this.phoneNumber() || !this.password()) {
@@ -147,30 +144,23 @@ export class LoginComponent implements OnInit {
     this.authService.login(credentials).subscribe({
       next: (response) => {
         if (response.success) {
-          console.log('✅ Login successful!', response.user);
-
           // Check if password reset is needed (first-time login)
           if (response.needsPasswordReset) {
-            console.log('⚠️ First-time login - Password reset required');
             this.router.navigate(['/reset-password']);
           } else {
             // Navigate based on user type
             if (this.activeTab() === 'parent') {
-              console.log('📊 Navigating to parent dashboard');
               this.router.navigate(['/dashboard']);
             } else {
-              console.log('🔧 Navigating to admin dashboard');
               this.router.navigate(['/admin']);
             }
           }
         } else {
           this.loginError.set(response.message || 'Login failed');
-          console.error('❌ Login failed:', response.message);
         }
       },
       error: (error) => {
         this.loginError.set('Invalid credentials. Please try again.');
-        console.error('❌ Login error:', error);
       }
     });
   }
@@ -183,8 +173,6 @@ export class LoginComponent implements OnInit {
   // Toggle language between English and Arabic
   toggleLanguage(): void {
     const newLang = this.lang() === 'en' ? 'ar' : 'en';
-    this.lang.set(newLang);
-    document.documentElement.lang = newLang;
-    document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+    this.setLanguage(newLang);
   }
 }

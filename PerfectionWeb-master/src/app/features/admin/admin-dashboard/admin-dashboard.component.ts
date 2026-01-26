@@ -1,5 +1,6 @@
 import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import {
@@ -21,6 +22,7 @@ import { ExcelUploadComponent } from '../excel-upload/excel-upload.component';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     LucideAngularModule,
     ExcelUploadComponent
     // TopNavComponent
@@ -42,6 +44,7 @@ export class AdminDashboardComponent implements OnInit {
 
   // Component state
   allStudents = signal<Student[]>([]);
+  selectedMonth = signal<number | null>(null);
   uploadErrors = signal<Array<{ timestamp: string; level: string; message: string }>>([]);
 
   // Computed statistics
@@ -85,7 +88,7 @@ export class AdminDashboardComponent implements OnInit {
       return;
     }
 
-    this.loadAllStudents();
+    // this.loadAllStudents();
     this.loadUploadErrors();
   }
 
@@ -96,8 +99,15 @@ export class AdminDashboardComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading students:', error);
+        this.allStudents.set([]);
       }
     });
+  }
+
+  applyAdminMonthFilter(): void {
+    // Current backend doesn't accept month param here — reload all students.
+    // If server-side filtering is later supported, pass `this.selectedMonth()` to the API.
+    this.loadAllStudents();
   }
 
   getAttendanceColor(attendance: number): string {
