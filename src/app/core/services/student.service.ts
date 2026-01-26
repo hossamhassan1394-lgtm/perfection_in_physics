@@ -15,6 +15,10 @@ export interface Student {
     average: number;
     total: number;
   };
+  homework: {
+    completed: number;
+    total: number;
+  };
 }
 
 // Mock student data
@@ -25,7 +29,8 @@ const MOCK_STUDENTS: Student[] = [
     grade: '3rd Secondary (Grade 12)',
     attendance: 85,
     payments: { paid: 420, total: 560 },
-    quizzes: { average: 88, total: 8 }
+    quizzes: { average: 88, total: 8 },
+    homework: { completed: 6, total: 8 }
   },
   {
     id: 'M-124',
@@ -33,7 +38,8 @@ const MOCK_STUDENTS: Student[] = [
     grade: '3rd Secondary (Grade 12)',
     attendance: 92,
     payments: { paid: 560, total: 560 },
-    quizzes: { average: 94, total: 8 }
+    quizzes: { average: 94, total: 8 },
+    homework: { completed: 8, total: 8 }
   }
 ];
 
