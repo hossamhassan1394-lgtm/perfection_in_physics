@@ -126,7 +126,7 @@ export class ParentDashboardComponent implements OnInit {
     });
   }
 
-  loadSessions(studentId: number): void {
+  loadSessions(studentId: string): void {
     // Mock session data - replace with actual service call
     const mockSessions: Session[] = [
       {
@@ -199,16 +199,16 @@ export class ParentDashboardComponent implements OnInit {
     this.sessions.set(mockSessions);
   }
 
-  /*onStudentChange(event: Event): void {
+  onStudentChange(event: Event): void {
     const selectElement = event.target as HTMLSelectElement;
-    const studentId = Number(selectElement.value);
+    const studentId = selectElement.value;
     const student = this.students().find(s => s.id === studentId);
     if (student) {
       this.selectedStudent.set(student);
       this.loadSessions(student.id);
     }
   }
-*/
+
   getPaymentPercentage(): number {
     const student = this.selectedStudent();
     if (!student) return 0;
