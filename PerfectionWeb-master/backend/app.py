@@ -988,8 +988,18 @@ def get_parent_students():
             entry['attendance_count'] += int(r.get('attendance', 0))
             entry['payments_sum'] += float(r.get('payment', 0))
             
+            # Handle no_quiz flag for quiz calculations
+            no_quiz_raw = r.get('no_quiz')
+            no_quiz = False
+            if no_quiz_raw is True:
+                no_quiz = True
+            elif isinstance(no_quiz_raw, str) and no_quiz_raw.lower() == 'true':
+                no_quiz = True
+            elif isinstance(no_quiz_raw, int) and no_quiz_raw == 1:
+                no_quiz = True
+            
             quiz_mark = r.get('quiz_mark')
-            if quiz_mark is not None:
+            if quiz_mark is not None and not no_quiz:
                 entry['quiz_sum'] += float(quiz_mark)
                 entry['quiz_count'] += 1
 
@@ -1045,6 +1055,18 @@ def get_parent_sessions():
             elif isinstance(is_general_exam_raw, int) and is_general_exam_raw == 1:
                 is_general_exam = True
             
+            # Handle no_quiz flag
+            no_quiz_raw = r.get('no_quiz')
+            no_quiz = False
+            
+            # Handle all possible true values
+            if no_quiz_raw is True:
+                no_quiz = True
+            elif isinstance(no_quiz_raw, str) and no_quiz_raw.lower() == 'true':
+                no_quiz = True
+            elif isinstance(no_quiz_raw, int) and no_quiz_raw == 1:
+                no_quiz = True
+            
             formatted_start = format_start_time_arabic(r.get('start_time'))
 
             session = {
@@ -1057,6 +1079,7 @@ def get_parent_sessions():
                 'created_at': r.get('created_at') or r.get('createdAt') or r.get('created at'),
                 'is_general_exam': r.get('is_general_exam', False),
                 'isGeneralExam': r.get('is_general_exam', False),
+                'no_quiz': no_quiz,
                 'startTime': formatted_start,
                 'start_time': formatted_start,
                 'attendance': 'attended' if int(r.get('attendance') or 0) == 1 else 'missed',

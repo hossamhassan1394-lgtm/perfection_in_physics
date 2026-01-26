@@ -1,27 +1,25 @@
 <nav class="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-xl border-b border-white/20">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center h-16">
-      <!-- Logo -->
-      <div class="flex items-center">
-        <h1 class="text-xl font-bold text-white">PerfectionWeb</h1>
-      </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            <!-- Logo -->
+            <div class="flex items-center">
+                <h1 class="text-xl font-bold text-white">PerfectionWeb</h1>
+            </div>
 
-      <!-- Navigation Items -->
-      <div class="flex items-center space-x-4">
-        <!-- Settings -->
-        <button class="p-2 text-white/70 hover:text-white transition-colors">
-          <lucide-angular [img]="Settings" class="w-5 h-5"></lucide-angular>
-        </button>
+            <!-- Navigation Items -->
+            <div class="flex items-center space-x-4">
+                <!-- Settings -->
+                <button class="p-2 text-white/70 hover:text-white transition-colors">
+                    <lucide-angular [img]="Settings" class="w-5 h-5"></lucide-angular>
+                </button>
 
-        <!-- Logout -->
-        <button 
-          (click)="logout()"
-          class="flex items-center space-x-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors"
-        >
-          <lucide-angular [img]="LogOut" class="w-4 h-4"></lucide-angular>
-          <span>Logout</span>
-        </button>
-      </div>
+                <!-- Logout -->
+                <button (click)="logout()"
+                    class="flex items-center space-x-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors">
+                    <lucide-angular [img]="LogOut" class="w-4 h-4"></lucide-angular>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </nav>

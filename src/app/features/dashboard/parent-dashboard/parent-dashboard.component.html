@@ -38,7 +38,7 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="content-wrapper">
-      
+
       <!-- Student Selector -->
       <div class="student-selector-wrapper">
         <label for="student-select" class="selector-label">
@@ -46,11 +46,7 @@
           SELECT STUDENT
         </label>
         <div class="select-container">
-          <select
-            id="student-select"
-            (change)="onStudentChange($event)"
-            class="student-select"
-          >
+          <select id="student-select" (change)="onStudentChange($event)" class="student-select">
             <option *ngFor="let student of students()" [value]="student.id">
               {{ student.name }}
             </option>
@@ -60,7 +56,7 @@
       </div>
 
       <div *ngIf="selectedStudent()">
-        
+
         <!-- Hero Profile Card -->
         <div class="hero-card">
           <div class="hero-content">
@@ -127,13 +123,8 @@
             <div class="circular-progress">
               <svg viewBox="0 0 140 140" class="progress-svg">
                 <circle cx="70" cy="70" r="60" class="progress-bg"></circle>
-                <circle 
-                  cx="70" 
-                  cy="70" 
-                  r="60" 
-                  class="progress-fill"
-                  [style.stroke-dashoffset]="377 - (377 * 0.8)"
-                ></circle>
+                <circle cx="70" cy="70" r="60" class="progress-fill" [style.stroke-dashoffset]="377 - (377 * 0.8)">
+                </circle>
               </svg>
               <div class="progress-text">80%</div>
             </div>
@@ -156,10 +147,7 @@
             <p class="last-date">September 2025</p>
             <div class="trend-chart">
               <svg viewBox="0 0 80 40" class="trend-svg">
-                <polyline 
-                  points="5,30 25,20 45,25 65,15 75,10" 
-                  class="trend-line"
-                ></polyline>
+                <polyline points="5,30 25,20 45,25 65,15 75,10" class="trend-line"></polyline>
                 <circle cx="5" cy="30" r="3" class="trend-dot"></circle>
                 <circle cx="25" cy="20" r="3" class="trend-dot"></circle>
                 <circle cx="45" cy="25" r="3" class="trend-dot"></circle>
@@ -202,13 +190,8 @@
             <div class="stat-visual">
               <svg viewBox="0 0 100 100" class="ring-svg">
                 <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  class="ring-fill attendance-ring"
-                  [style.stroke-dashoffset]="251 - (251 * selectedStudent()!.attendance / 100)"
-                ></circle>
+                <circle cx="50" cy="50" r="40" class="ring-fill attendance-ring"
+                  [style.stroke-dashoffset]="251 - (251 * selectedStudent()!.attendance / 100)"></circle>
               </svg>
             </div>
             <div class="stat-progress-bar">
@@ -224,18 +207,14 @@
             <div class="stat-content">
               <p class="stat-label">PAYMENT STATUS</p>
               <p class="stat-value payment-value">{{ getPaymentPercentage() }}%</p>
-              <p class="stat-detail">{{ selectedStudent()!.payments.paid }} / {{ selectedStudent()!.payments.total }} EGP</p>
+              <p class="stat-detail">{{ selectedStudent()!.payments.paid }} / {{ selectedStudent()!.payments.total }}
+                EGP</p>
             </div>
             <div class="stat-visual">
               <svg viewBox="0 0 100 100" class="ring-svg">
                 <circle cx="50" cy="50" r="40" class="ring-bg"></circle>
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  class="ring-fill payment-ring"
-                  [style.stroke-dashoffset]="251 - (251 * getPaymentPercentage() / 100)"
-                ></circle>
+                <circle cx="50" cy="50" r="40" class="ring-fill payment-ring"
+                  [style.stroke-dashoffset]="251 - (251 * getPaymentPercentage() / 100)"></circle>
               </svg>
             </div>
             <div class="stat-progress-bar">
@@ -300,7 +279,8 @@
                   </div>
                   <span class="status-badge" [ngClass]="session.attendance">
                     <span class="badge-dot"></span>
-                    {{ session.attendance === 'attended' ? 'Attended' : session.attendance === 'upcoming' ? 'Upcoming' : 'Missed' }}
+                    {{ session.attendance === 'attended' ? 'Attended' : session.attendance === 'upcoming' ? 'Upcoming' :
+                    'Missed' }}
                   </span>
                 </div>
 
@@ -322,7 +302,7 @@
                     <p class="info-value">{{ session.endTime }}</p>
                   </div>
 
-                  <div class="info-item" *ngIf="session.quizCorrect > 0">
+                  <div class="info-item" *ngIf="session.quizCorrect > 0 && !session.noQuiz">
                     <div class="info-icon-wrapper">
                       <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
                     </div>
@@ -341,7 +321,7 @@
                 </div>
 
                 <!-- Homework Status -->
-                <div class="homework-status">
+                <div class="homework-status" *ngIf="!session.isGeneralExam">
                   <div class="homework-left">
                     <lucide-angular [img]="FileText" class="homework-icon"></lucide-angular>
                     <span class="homework-label">Homework Status</span>
