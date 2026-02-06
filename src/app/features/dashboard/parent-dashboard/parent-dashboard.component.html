@@ -223,14 +223,14 @@
           </div>
 
           <!-- Quiz Performance Card -->
-          <div class="stat-card" *ngIf="selectedStudent()!.quizzes.total > 0">
+          <div class="stat-card" *ngIf="getQuizSessionsCount().total > 0">
             <div class="stat-icon-wrapper quiz-icon">
               <lucide-angular [img]="GraduationCap" class="stat-icon"></lucide-angular>
             </div>
             <div class="stat-content">
               <p class="stat-label">QUIZ PERFORMANCE</p>
-              <p class="stat-value">{{ selectedStudent()!.quizzes.average }}%</p>
-              <p class="stat-detail">Across all sessions</p>
+              <p class="stat-value">{{ getQuizAverage() }}%</p>
+              <p class="stat-detail">{{ getQuizSessionsCount().passed }} / {{ getQuizSessionsCount().total }} sessions</p>
             </div>
             <div class="stat-visual">
               <div class="bar-chart">

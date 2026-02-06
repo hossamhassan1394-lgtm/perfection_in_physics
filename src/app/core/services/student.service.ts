@@ -38,6 +38,15 @@ export interface Session {
   noQuiz?: boolean;
 }
 
+export interface Lecture {
+  name: string;
+  isGeneralExam: boolean;
+  noQuiz: boolean;
+  sessionNumber: number;
+  groupName: string;
+  studentCount: number;
+}
+
 // Mock student data
 const MOCK_STUDENTS: Student[] = [
   {
@@ -178,5 +187,22 @@ export class StudentService {
     ];
 
     return of(mockSessions).pipe(delay(300));
+  }
+
+  /**
+   * Get all lectures for admin to manage no_quiz flag
+   */
+  getLectures(): Observable<{ lectures: Lecture[] }> {
+    return this.http.get<{ lectures: Lecture[] }>('/api/admin/lectures');
+  }
+
+  /**
+   * Update no_quiz flag for a lecture
+   */
+  updateLectureNoQuiz(lectureName: string, noQuiz: boolean): Observable<{ success: boolean; updatedCount: number }> {
+    return this.http.post<{ success: boolean; updatedCount: number }>('/api/admin/lectures/update-no-quiz', {
+      lectureName,
+      noQuiz
+    });
   }
 }

@@ -1824,6 +1824,65 @@ def download_upload_log():
         logger.exception(f"Error sending log file: {str(e)}")
         return jsonify({'error': f'Error sending log file: {str(e)}'}), 500
 
+
+@app.route('/api/admin/lectures', methods=['GET'])
+def get_admin_lectures():
+    """Get all lectures for admin dashboard to manage no_quiz flag"""
+    try:
+        result = supabase.table('session_records').select('id, student_id, lecture_name, exam_name, is_general_exam, no_quiz, session_number, group_name, student_name').execute()
+        records = result.data or []
+        
+        # Group by lecture name to get unique lectures
+        lectures = {}
+        for r in records:
+            lecture_name = r.get('lecture_name') or r.get('exam_name') or f"Session {r.get('session_number')}"
+            if lecture_name not in lectures:
+                # Handle no_quiz boolean properly
+                no_quiz_raw = r.get('no_quiz')
+                no_quiz = False
+                if no_quiz_raw is True:
+                    no_quiz = True
+                elif isinstance(no_quiz_raw, str) and no_quiz_raw.lower() == 'true':
+                    no_quiz = True
+                elif isinstance(no_quiz_raw, int) and no_quiz_raw == 1:
+                    no_quiz = True
+                
+                lectures[lecture_name] = {
+                    'name': lecture_name,
+                    'isGeneralExam': r.get('is_general_exam', False),
+                    'noQuiz': no_quiz,
+                    'sessionNumber': r.get('session_number'),
+                    'groupName': r.get('group_name'),
+                    'studentCount': 0
+                }
+            lectures[lecture_name]['studentCount'] += 1
+        
+        return jsonify({'lectures': list(lectures.values())}), 200
+    except Exception as e:
+        logger.exception(f"Error fetching lectures: {str(e)}")
+        return jsonify({'error': f'Error fetching lectures: {str(e)}'}), 500
+
+
+@app.route('/api/admin/lectures/update-no-quiz', methods=['POST'])
+def update_lecture_no_quiz():
+    """Update the no_quiz flag for a lecture across all students"""
+    try:
+        data = request.get_json()
+        lecture_name = data.get('lectureName')
+        no_quiz = data.get('noQuiz', False)
+        
+        if not lecture_name:
+            return jsonify({'error': 'lectureName is required'}), 400
+        
+        # Update all records with this lecture name
+        result = supabase.table('session_records').update({'no_quiz': no_quiz}).eq('lecture_name', lecture_name).execute()
+        
+        logger.info(f"Updated no_quiz flag for lecture '{lecture_name}' to {no_quiz}")
+        return jsonify({'success': True, 'updatedCount': len(result.data or [])}), 200
+    except Exception as e:
+        logger.exception(f"Error updating lecture no_quiz flag: {str(e)}")
+        return jsonify({'error': f'Error updating lecture: {str(e)}'}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 

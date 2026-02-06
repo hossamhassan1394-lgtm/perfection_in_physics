@@ -140,6 +140,31 @@ export class ParentDashboardComponent implements OnInit {
     return Math.round((paid / total) * 100);
   }
 
+  getQuizAverage(): number {
+    const allSessions = this.sessions();
+    // Filter out sessions with no_quiz flag
+    const quizSessions = allSessions.filter(s => !s.noQuiz && s.quizCorrect > 0);
+    
+    if (quizSessions.length === 0) return 0;
+    
+    const totalQuizMarks = quizSessions.reduce((sum, s) => sum + s.quizCorrect, 0);
+    const totalQuizPoints = quizSessions.reduce((sum, s) => sum + s.quizTotal, 0);
+    
+    if (totalQuizPoints === 0) return 0;
+    
+    return Math.round((totalQuizMarks / totalQuizPoints) * 100);
+  }
+
+  getQuizSessionsCount(): { passed: number; total: number } {
+    const allSessions = this.sessions();
+    // Filter out sessions with no_quiz flag
+    const quizSessions = allSessions.filter(s => !s.noQuiz && s.quizTotal > 0);
+    return {
+      passed: quizSessions.filter(s => s.quizCorrect > 0).length,
+      total: quizSessions.length
+    };
+  }
+
   scrollSessions(direction: 'left' | 'right'): void {
     if (!this.sessionCarousel) return;
 

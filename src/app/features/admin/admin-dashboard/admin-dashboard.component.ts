@@ -6,11 +6,14 @@ import {
   Users,
   TrendingUp,
   DollarSign,
-  Award
+  Award,
+  BookOpen,
+  CheckCircle,
+  XCircle
 } from 'lucide-angular';
 import { TopNavComponent } from '../../../shared/components/top-nav/top-nav.component';
 import { AuthService } from '../../../core/services/auth.service';
-import { StudentService, Student } from '../../../core/services/student.service';
+import { StudentService, Student, Lecture } from '../../../core/services/student.service';
 
 
 
@@ -31,9 +34,15 @@ export class AdminDashboardComponent implements OnInit {
   readonly TrendingUp = TrendingUp;
   readonly DollarSign = DollarSign;
   readonly Award = Award;
+  readonly BookOpen = BookOpen;
+  readonly CheckCircle = CheckCircle;
+  readonly XCircle = XCircle;
 
   // Component state
   allStudents = signal<Student[]>([]);
+  lectures = signal<Lecture[]>([]);
+  isLoadingLectures = signal(false);
+  updateSuccess = signal<{ message: string; visible: boolean }>({ message: '', visible: false });
 
   // Computed statistics
   totalStudents = computed(() => this.allStudents().length);
@@ -76,6 +85,7 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   this.loadAllStudents();
+  this.loadLectures();
 }
 
   loadAllStudents(): void {
@@ -85,6 +95,45 @@ export class AdminDashboardComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading students:', error);
+      }
+    });
+  }
+
+  loadLectures(): void {
+    this.isLoadingLectures.set(true);
+    this.studentService.getLectures().subscribe({
+      next: (response: any) => {
+        this.lectures.set(response.lectures || []);
+        this.isLoadingLectures.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading lectures:', error);
+        this.isLoadingLectures.set(false);
+      }
+    });
+  }
+
+  toggleNoQuiz(lecture: Lecture): void {
+    const newNoQuizValue = !lecture.noQuiz;
+    this.studentService.updateLectureNoQuiz(lecture.name, newNoQuizValue).subscribe({
+      next: () => {
+        // Update the lecture in the local array
+        lecture.noQuiz = newNoQuizValue;
+        
+        // Show success message
+        this.updateSuccess.set({
+          message: `Lecture "${lecture.name}" no-quiz flag ${newNoQuizValue ? 'enabled' : 'disabled'}`,
+          visible: true
+        });
+        
+        // Hide message after 3 seconds
+        setTimeout(() => {
+          this.updateSuccess.set({ message: '', visible: false });
+        }, 3000);
+      },
+      error: (error) => {
+        console.error('Error updating lecture:', error);
+        alert('Failed to update lecture. Please try again.');
       }
     });
   }
