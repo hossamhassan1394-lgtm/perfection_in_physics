@@ -302,7 +302,7 @@
                     <p class="info-value">{{ session.endTime }}</p>
                   </div>
 
-                  <div class="info-item" *ngIf="!session.noQuiz && (session.quizCorrect > 0 || (session.quizTotal && session.quizTotal > 0))">
+                  <div class="info-item" *ngIf="!session.noQuiz && session.quizCorrect > 0">
                     <div class="info-icon-wrapper">
                       <lucide-angular [img]="GraduationCap" class="info-icon"></lucide-angular>
                     </div>
