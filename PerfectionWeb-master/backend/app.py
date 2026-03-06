@@ -537,7 +537,7 @@ def create_or_update_parent(parent_no, student_name=None):
             parent_data = {
                 'phone_number': parent_no_norm,
                 'password_hash': '123456',  # Default password (in production, hash this)
-                'needs_password_reset': True,
+                'needs_password_reset': False,
                 'name': student_name or f'Parent {parent_no_norm}'
             }
             try:
@@ -1344,7 +1344,7 @@ def login():
                 parent_data = {
                     'phone_number': phone_number,
                     'password_hash': password,
-                    'needs_password_reset': True,
+                    'needs_password_reset': False,
                     'name': f'Parent {phone_number}'
                 }
                 create_result = supabase.table('parents').insert(parent_data).execute()
