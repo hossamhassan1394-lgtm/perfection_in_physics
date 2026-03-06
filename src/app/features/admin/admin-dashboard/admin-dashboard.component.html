@@ -12,6 +12,11 @@
         <p class="text-white/70">Manage all students and view analytics</p>
       </div>
 
+      <!-- Success Message -->
+      <div *ngIf="updateSuccess().visible" class="mb-6 bg-green-500/20 border border-green-500/50 text-green-300 px-4 py-3 rounded-lg">
+        {{ updateSuccess().message }}
+      </div>
+
       <!-- Stats Overview -->
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         
@@ -57,6 +62,54 @@
             </div>
             <lucide-angular [img]="Award" class="w-12 h-12 text-[#9F7AEA]"></lucide-angular>
           </div>
+        </div>
+      </div>
+
+      <!-- Lectures Management Section -->
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 mb-8">
+        <div class="flex items-center gap-2 mb-4">
+          <lucide-angular [img]="BookOpen" class="w-6 h-6 text-[#4FD1C5]"></lucide-angular>
+          <h2 class="text-xl font-bold text-white">Lecture Quiz Management</h2>
+        </div>
+        
+        <p class="text-white/70 text-sm mb-4">Toggle the "No Quiz" checkbox to disable quiz tracking for specific lectures in parent dashboard</p>
+        
+        <div *ngIf="isLoadingLectures()" class="text-white/70">Loading lectures...</div>
+        
+        <div *ngIf="!isLoadingLectures() && lectures().length === 0" class="text-white/70">No lectures found</div>
+        
+        <div *ngIf="!isLoadingLectures() && lectures().length > 0" class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-white/10">
+                <th class="text-left py-3 px-4 text-white/70 font-semibold">Lecture Name</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">Type</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">Students</th>
+                <th class="text-center py-3 px-4 text-white/70 font-semibold">No Quiz</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let lecture of lectures()" class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <td class="py-4 px-4 text-white font-medium max-w-xs truncate">{{ lecture.name }}</td>
+                <td class="py-4 px-4 text-center">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                        [class]="lecture.isGeneralExam ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'">
+                    {{ lecture.isGeneralExam ? 'Exam' : 'Lecture' }}
+                  </span>
+                </td>
+                <td class="py-4 px-4 text-center text-white/70">{{ lecture.studentCount }}</td>
+                <td class="py-4 px-4 text-center">
+                  <button (click)="toggleNoQuiz(lecture)"
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-all"
+                          [class]="lecture.noQuiz 
+                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' 
+                            : 'bg-green-500/20 text-green-300 hover:bg-green-500/30'">
+                    <lucide-angular [img]="lecture.noQuiz ? XCircle : CheckCircle" class="w-5 h-5"></lucide-angular>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
