@@ -3,9 +3,9 @@ import { Observable } from 'rxjs';
 
 // Mock data simulating Excel sheet of parent phone numbers
 const PARENT_ACCOUNTS = [
-  { phone: '+20 100-0000-000', password: '123456', needsPasswordReset: true, name: 'Parent 1', students: [1, 2] },
-  { phone: '+20 101-1111-111', password: '123456', needsPasswordReset: true, name: 'Parent 2', students: [3] },
-  { phone: '+20 102-2222-222', password: '123456', needsPasswordReset: true, name: 'Parent 3', students: [4, 5] },
+  { phone: '+20 100-0000-000', password: '123456', needsPasswordReset: false, name: 'Parent 1', students: [1, 2] },
+  { phone: '+20 101-1111-111', password: '123456', needsPasswordReset: false, name: 'Parent 2', students: [3] },
+  { phone: '+20 102-2222-222', password: '123456', needsPasswordReset: false, name: 'Parent 3', students: [4, 5] },
 ];
 
 const ADMIN_ACCOUNTS = [
