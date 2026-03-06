@@ -142,10 +142,6 @@ export class ParentDashboardComponent implements OnInit {
       return;
     }
 
-    if (this.authService.needsPasswordReset()) {
-      this.router.navigate(['/reset-password']);
-      return;
-    }
 
     if (this.authService.getUserType() !== 'parent') {
       this.router.navigate(['/admin']);

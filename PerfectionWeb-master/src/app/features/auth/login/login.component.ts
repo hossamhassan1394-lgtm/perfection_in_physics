@@ -65,7 +65,7 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     // Set Arabic as default
     this.setLanguage('ar');
-    
+
     // Check if user is already logged in with "Remember Me"
     if (this.authService.isLoggedIn() && this.authService.isRememberMeEnabled()) {
       this.redirectToDashboard();
@@ -80,12 +80,6 @@ export class LoginComponent implements OnInit {
   }
 
   redirectToDashboard(): void {
-    // Check if password reset is needed first
-    if (this.authService.needsPasswordReset()) {
-      this.router.navigate(['/reset-password']);
-      return;
-    }
-
     // Navigate based on user type
     const userType = this.authService.getUserType();
     if (userType === 'parent') {

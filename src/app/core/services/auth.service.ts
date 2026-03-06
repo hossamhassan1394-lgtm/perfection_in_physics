@@ -56,7 +56,7 @@ export class AuthService {
       setTimeout(() => {
         if (credentials.userType === 'parent') {
           const account = this.findParentAccount(credentials.identifier, credentials.password);
-          
+
           if (account) {
             const user: User = {
               identifier: account.phone,
@@ -65,16 +65,16 @@ export class AuthService {
               needsPasswordReset: account.needsPasswordReset,
               students: account.students
             };
-            
+
             this.currentUser.set(user);
-            
+
             // Save to storage only if "Remember Me" is checked
             if (credentials.rememberMe) {
               this.saveUserToStorage(user, true);
             } else {
               this.saveUserToStorage(user, false);
             }
-            
+
             observer.next({
               success: true,
               needsPasswordReset: account.needsPasswordReset,
@@ -90,23 +90,23 @@ export class AuthService {
           const account = ADMIN_ACCOUNTS.find(
             acc => acc.username === credentials.identifier && acc.password === credentials.password
           );
-          
+
           if (account) {
             const user: User = {
               identifier: account.username,
               name: account.name,
               type: 'admin'
             };
-            
+
             this.currentUser.set(user);
-            
+
             // Save to storage only if "Remember Me" is checked
             if (credentials.rememberMe) {
               this.saveUserToStorage(user, true);
             } else {
               this.saveUserToStorage(user, false);
             }
-            
+
             observer.next({
               success: true,
               user
@@ -118,7 +118,7 @@ export class AuthService {
             });
           }
         }
-        
+
         observer.complete();
       }, 500);
     });
@@ -131,7 +131,7 @@ export class AuthService {
     return new Observable(observer => {
       setTimeout(() => {
         const user = this.currentUser();
-        
+
         if (!user) {
           observer.next({
             success: false,
@@ -152,15 +152,15 @@ export class AuthService {
 
         // Update password in mock storage
         this.updateParentPassword(user.identifier, newPassword);
-        
+
         // Update user state
         const updatedUser = { ...user, needsPasswordReset: false };
         this.currentUser.set(updatedUser);
-        
+
         // Update storage with new user state
         const rememberMe = this.isRememberMeEnabled();
         this.saveUserToStorage(updatedUser, rememberMe);
-        
+
         observer.next({
           success: true,
           message: 'Password updated successfully'
@@ -222,7 +222,7 @@ export class AuthService {
     // First check if there's a custom password stored
     const customPasswords = this.getCustomPasswords();
     const customPassword = customPasswords[phone];
-    
+
     if (customPassword) {
       // User has already reset their password
       if (customPassword === password) {
@@ -231,7 +231,7 @@ export class AuthService {
       }
       return null;
     }
-    
+
     // Check default password (first-time login)
     return PARENT_ACCOUNTS.find(
       acc => acc.phone === phone && acc.password === password
@@ -263,7 +263,7 @@ export class AuthService {
   private loadUserFromStorage(): void {
     // Only auto-load if "Remember Me" was checked
     const rememberMe = localStorage.getItem(this.REMEMBER_ME_KEY) === 'true';
-    
+
     if (!rememberMe) {
       // Clear any existing session
       localStorage.removeItem(this.STORAGE_KEY);
